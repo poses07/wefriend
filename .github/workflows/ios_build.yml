@@ -16,7 +16,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.x' # Projenin kullandığı sürüme yakın bir sürüm
+          flutter-version: '3.29.x' # Projenin kullandığı Dart 3.7.2 ile uyumlu olan Flutter sürümü
           channel: 'stable'
           cache: true
 

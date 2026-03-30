@@ -675,6 +675,39 @@ class ApiService {
     }
   }
 
+  // Hikaye Yükle
+  Future<Map<String, dynamic>> uploadStory(File imageFile) async {
+    try {
+      final token = await _storage.read(key: 'jwt_token');
+      String fileName = imageFile.path.split('/').last;
+
+      FormData formData = FormData.fromMap({
+        "media": await MultipartFile.fromFile(
+          imageFile.path,
+          filename: fileName,
+        ),
+      });
+
+      final response = await _dio.post(
+        '/stories/upload',
+        data: formData,
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'multipart/form-data',
+          },
+        ),
+      );
+
+      if (response.statusCode == 200 && response.data['status'] == 'success') {
+        return {'success': true};
+      }
+      return {'success': false, 'message': response.data['message']};
+    } catch (e) {
+      return {'success': false, 'message': 'Hikaye yüklenemedi: $e'};
+    }
+  }
+
   // Profil Bilgilerini Güncelle (Edit veya Onboarding)
   Future<Map<String, dynamic>> updateProfile({
     String? alias,

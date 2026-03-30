@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -20,19 +21,39 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
+  bool _isUploadingStory = false;
+
   Future<void> _pickStoryImage() async {
     final picker = ImagePicker();
     final XFile? image = await picker.pickImage(source: ImageSource.gallery);
 
     if (image != null) {
-      // Şimdilik sadece toast gösterelim. İleride backend'e hikaye olarak yükleme eklenecek.
       if (!mounted) return;
-      CustomSnackBar.show(
-        context: context,
-        message:
-            'Hikaye fotoğrafı seçildi: ${image.name} (Yakında aktif olacak)',
-        type: NotificationType.success,
-      );
+
+      setState(() => _isUploadingStory = true);
+
+      final result = await ref
+          .read(apiServiceProvider)
+          .uploadStory(File(image.path));
+
+      if (!mounted) return;
+      setState(() => _isUploadingStory = false);
+
+      if (result['success'] == true) {
+        CustomSnackBar.show(
+          context: context,
+          message: 'Hikaye başarıyla paylaşıldı!',
+          type: NotificationType.success,
+        );
+        // Hikayeleri yenilemek için sayfayı tazeleyebilir veya state'i güncelleyebiliriz
+        ref.invalidate(homeFeedProvider);
+      } else {
+        CustomSnackBar.show(
+          context: context,
+          message: result['message'] ?? 'Hikaye paylaşılamadı',
+          type: NotificationType.error,
+        );
+      }
     }
   }
 
@@ -226,21 +247,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
                         if (isMyStory) {
                           return GestureDetector(
-                            onTap: () {
-                              if (hasMyStory) {
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder:
-                                        (context) => MyStoryScreen(
-                                          story: myStoryGroup!['stories'][0],
-                                          isMyStory: true,
-                                        ),
-                                  ),
-                                );
-                              } else {
-                                _pickStoryImage();
-                              }
-                            },
+                            onTap:
+                                _isUploadingStory
+                                    ? null
+                                    : () {
+                                      if (hasMyStory) {
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder:
+                                                (context) => MyStoryScreen(
+                                                  story:
+                                                      myStoryGroup!['stories'][0],
+                                                  isMyStory: true,
+                                                ),
+                                          ),
+                                        );
+                                      } else {
+                                        _pickStoryImage();
+                                      }
+                                    },
                             child: Padding(
                               padding: const EdgeInsets.only(right: 16.0),
                               child: Column(
@@ -282,19 +307,35 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                             ),
                                             child: ClipOval(
                                               child:
-                                                  myAvatarUrl != null
-                                                      ? CachedNetworkImage(
-                                                        imageUrl: myAvatarUrl,
+                                                  _isUploadingStory
+                                                      ? const SizedBox(
                                                         width: 64,
                                                         height: 64,
-                                                        fit: BoxFit.cover,
+                                                        child: Padding(
+                                                          padding:
+                                                              EdgeInsets.all(
+                                                                16.0,
+                                                              ),
+                                                          child:
+                                                              CircularProgressIndicator(
+                                                                strokeWidth: 2,
+                                                              ),
+                                                        ),
                                                       )
-                                                      : Icon(
-                                                        Icons.person,
-                                                        size: 64,
-                                                        color:
-                                                            cs.onSurfaceVariant,
-                                                      ),
+                                                      : (myAvatarUrl != null
+                                                          ? CachedNetworkImage(
+                                                            imageUrl:
+                                                                myAvatarUrl,
+                                                            width: 64,
+                                                            height: 64,
+                                                            fit: BoxFit.cover,
+                                                          )
+                                                          : Icon(
+                                                            Icons.person,
+                                                            size: 64,
+                                                            color:
+                                                                cs.onSurfaceVariant,
+                                                          )),
                                             ),
                                           ),
                                         ),

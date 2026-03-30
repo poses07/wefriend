@@ -10,6 +10,8 @@ import 'venue_detail_screen.dart';
 import '../services/venue_service.dart';
 import 'user_detail_screen.dart';
 import '../providers.dart';
+import 'chat_detail_screen.dart';
+import '../utils/custom_snackbar.dart';
 
 class DiscoverScreen extends ConsumerStatefulWidget {
   const DiscoverScreen({super.key});
@@ -431,12 +433,36 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
                                 _buildGlassButton(
                                   icon: Icons.chat_bubble_rounded,
                                   color: Colors.blue,
-                                  onTap: () {},
+                                  onTap: () {
+                                    // Mesaj atma işlemi
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder:
+                                            (context) => ChatDetailScreen(
+                                              chatId:
+                                                  0, // Yeni sohbet başlatma mantığı
+                                              otherUserId: user['id'],
+                                              userName:
+                                                  user['alias'] ?? 'Anonim',
+                                              avatarUrl:
+                                                  user['avatar_url'] ?? '',
+                                            ),
+                                      ),
+                                    );
+                                  },
                                 ),
                                 _buildGlassButton(
                                   icon: Icons.favorite_rounded,
                                   color: Colors.redAccent,
-                                  onTap: () {},
+                                  onTap: () {
+                                    // Beğenme işlemi (şimdilik görsel, backend'e beğeni isteği atılabilir)
+                                    CustomSnackBar.show(
+                                      context: context,
+                                      message:
+                                          '${user['alias'] ?? 'Kullanıcı'} beğenildi!',
+                                      type: NotificationType.success,
+                                    );
+                                  },
                                 ),
                               ],
                             ),

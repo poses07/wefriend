@@ -1,0 +1,1 @@
+ C:\\xampp\\htdocs\\wefriend\\.dart_tool\\flutter_build\\07f15f7ef5450daaccca566b51581660\\native_assets.json: 

@@ -1,0 +1,3 @@
+USE wefriend_db;
+ALTER TABLE users ADD COLUMN phone VARCHAR(20) UNIQUE NULL AFTER uuid;
+ALTER TABLE users ADD COLUMN password_hash VARCHAR(255) NULL AFTER alias;

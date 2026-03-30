@@ -1,0 +1,12 @@
+RewriteEngine On
+
+# Authorization başlığının PHP'ye geçmesine izin ver
+SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
+
+# Eğer istenen dosya veya klasör gerçekten varsa, onu göster
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Geri kalan tüm istekleri index.php'ye yönlendir
+# Doğrudan public_html içine atıldığı için /index.php şeklinde yönlendirmeliyiz
+RewriteRule ^(.*)$ /index.php?url=$1 [QSA,L]

@@ -1,0 +1,42 @@
+name: Build iOS Unsigned IPA
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch: # Manuel tetikleme butonu
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.x' # Projenin kullandığı sürüme yakın bir sürüm
+          channel: 'stable'
+          cache: true
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Build iOS App (Unsigned)
+        run: |
+          flutter build ios --release --no-codesign
+          
+      - name: Create Payload and IPA
+        run: |
+          cd build/ios/iphoneos
+          mkdir Payload
+          cp -r Runner.app Payload/
+          zip -r wefriend_unsigned.ipa Payload/
+          
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wefriend-ios-ipa
+          path: build/ios/iphoneos/wefriend_unsigned.ipa
+          retention-days: 5

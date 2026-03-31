@@ -689,7 +689,7 @@ class ApiService {
       });
 
       final response = await _dio.post(
-        '/stories/upload',
+        '/stories/add',
         data: formData,
         options: Options(
           headers: {

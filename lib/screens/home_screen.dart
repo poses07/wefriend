@@ -49,16 +49,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         message: 'Hikaye başarıyla paylaşıldı!',
         type: NotificationType.success,
       );
-      
+
       // Tüm sağlayıcıları temizle ve yenilemeye zorla (Önbellek sıfırlama)
       ref.invalidate(storiesProvider);
       ref.invalidate(homeFeedProvider);
-      
+
       // Riverpod state'lerinin hemen güncellenmesi için ufak bir bekleme ve okuma
       await Future.delayed(const Duration(milliseconds: 300));
       ref.read(storiesProvider.future);
       ref.read(homeFeedProvider.future);
-      
     } else {
       CustomSnackBar.show(
         context: context,
@@ -267,36 +266,58 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                           context: context,
                                           backgroundColor: Colors.transparent,
                                           builder: (context) {
-                                            final cs = Theme.of(context).colorScheme;
+                                            final cs =
+                                                Theme.of(context).colorScheme;
                                             return Container(
                                               margin: const EdgeInsets.all(16),
                                               decoration: BoxDecoration(
                                                 color: cs.surface,
-                                                borderRadius: BorderRadius.circular(24),
+                                                borderRadius:
+                                                    BorderRadius.circular(24),
                                               ),
                                               child: Column(
                                                 mainAxisSize: MainAxisSize.min,
                                                 children: [
                                                   ListTile(
-                                                    leading: Icon(Icons.visibility_rounded, color: cs.primary),
-                                                    title: const Text('Hikayemi Gör'),
+                                                    leading: Icon(
+                                                      Icons.visibility_rounded,
+                                                      color: cs.primary,
+                                                    ),
+                                                    title: const Text(
+                                                      'Hikayemi Gör',
+                                                    ),
                                                     onTap: () {
                                                       Navigator.pop(context);
-                                                      Navigator.of(context).push(
+                                                      Navigator.of(
+                                                        context,
+                                                      ).push(
                                                         MaterialPageRoute(
                                                           builder:
-                                                              (context) => MyStoryScreen(
-                                                                story: myStoryGroup!['stories'][0],
+                                                              (
+                                                                context,
+                                                              ) => MyStoryScreen(
+                                                                story:
+                                                                    myStoryGroup!['stories'][0],
                                                                 isMyStory: true,
                                                               ),
                                                         ),
                                                       );
                                                     },
                                                   ),
-                                                  Divider(height: 1, color: cs.outlineVariant.withValues(alpha: 0.2)),
+                                                  Divider(
+                                                    height: 1,
+                                                    color: cs.outlineVariant
+                                                        .withValues(alpha: 0.2),
+                                                  ),
                                                   ListTile(
-                                                    leading: Icon(Icons.add_circle_outline_rounded, color: cs.primary),
-                                                    title: const Text('Yeni Hikaye Ekle'),
+                                                    leading: Icon(
+                                                      Icons
+                                                          .add_circle_outline_rounded,
+                                                      color: cs.primary,
+                                                    ),
+                                                    title: const Text(
+                                                      'Yeni Hikaye Ekle',
+                                                    ),
                                                     onTap: () {
                                                       Navigator.pop(context);
                                                       _pickStoryImage();
@@ -671,7 +692,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                           child: Stack(
                                             children: [
                                               PremiumAvatar(
-                                                imageUrl: avatarUrl ?? '',
+                                                imageUrl:
+                                                    avatarUrl?.toString() ?? '',
                                                 size:
                                                     54, // Biraz daha minimal avatar
                                                 rank: userRank,

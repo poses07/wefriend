@@ -210,9 +210,6 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
     _startPolling();
   }
 
-  String _formatTime(DateTime time) {
-    return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
-  }
 
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {

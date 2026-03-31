@@ -49,10 +49,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         message: 'Hikaye başarıyla paylaşıldı!',
         type: NotificationType.success,
       );
-      // Hikayeler listesini yenile
+      
+      // Tüm sağlayıcıları temizle ve yenilemeye zorla (Önbellek sıfırlama)
       ref.invalidate(storiesProvider);
-      // Ana akışı da yenileyelim
       ref.invalidate(homeFeedProvider);
+      
+      // Riverpod state'lerinin hemen güncellenmesi için ufak bir bekleme ve okuma
+      await Future.delayed(const Duration(milliseconds: 300));
+      ref.read(storiesProvider.future);
+      ref.read(homeFeedProvider.future);
+      
     } else {
       CustomSnackBar.show(
         context: context,

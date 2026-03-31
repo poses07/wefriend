@@ -52,6 +52,9 @@ class StoryController {
     public function getStories() {
         $user_id = $this->authenticate();
 
+        // Önce süresi dolmuş hikayeleri veritabanından ve sunucudan temizleyelim (Cron yerine istek bazlı otomatik temizlik)
+        $this->cleanupExpiredStories();
+
         $query = "
             SELECT s.id as story_id, s.media_url, s.created_at, s.expires_at, s.views_count,
                    u.id as user_id, u.alias, u.avatar_url, u.rank_level
@@ -90,6 +93,35 @@ class StoryController {
         }
 
         Response::json(200, "Hikayeler getirildi.", array_values($groupedStories));
+    }
+
+    private function cleanupExpiredStories() {
+        try {
+            // Süresi dolmuş hikayeleri bul
+            $stmt = $this->db->query("SELECT id, media_url FROM stories WHERE expires_at <= NOW()");
+            $expiredStories = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            if (count($expiredStories) > 0) {
+                foreach ($expiredStories as $story) {
+                    $media_url = $story['media_url'];
+                    $fileName = basename($media_url);
+                    $filePath = __DIR__ . '/../uploads/stories/' . $fileName;
+                    
+                    // Sunucudan dosyayı sil
+                    if (file_exists($filePath)) {
+                        unlink($filePath);
+                    }
+                    
+                    // Views tablosundan sil
+                    $this->db->prepare("DELETE FROM story_views WHERE story_id = :story_id")->execute([':story_id' => $story['id']]);
+                }
+                
+                // Hikayeleri veritabanından topluca sil
+                $this->db->query("DELETE FROM stories WHERE expires_at <= NOW()");
+            }
+        } catch (Exception $e) {
+            // Hata olursa sessizce devam et, akışı bozma
+        }
     }
 
     public function addStory() {

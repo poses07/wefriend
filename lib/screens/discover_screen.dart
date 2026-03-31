@@ -26,7 +26,6 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
   late Future<List<Map<String, dynamic>>> _venuesFuture;
   late TabController _tabController;
   bool _isVenuesTabActive = false;
-  final Set<int> _likedUserIds = {}; // Beğenilen kullanıcıları takip etmek için
 
   @override
   void initState() {
@@ -473,18 +472,24 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
                                 ),
                                 _buildGlassButton(
                                   icon:
-                                      _likedUserIds.contains(user['id'])
+                                      ref
+                                              .watch(likedUsersProvider)
+                                              .contains(user['id'])
                                           ? Icons.favorite_rounded
                                           : Icons.favorite_border_rounded,
                                   color:
-                                      _likedUserIds.contains(user['id'])
+                                      ref
+                                              .watch(likedUsersProvider)
+                                              .contains(user['id'])
                                           ? Colors.red
                                           : Colors.redAccent,
                                   onTap: () {
-                                    if (!_likedUserIds.contains(user['id'])) {
-                                      setState(() {
-                                        _likedUserIds.add(user['id']);
-                                      });
+                                    if (!ref
+                                        .read(likedUsersProvider)
+                                        .contains(user['id'])) {
+                                      ref
+                                          .read(likedUsersProvider.notifier)
+                                          .toggleLike(user['id']);
                                       // Backend'e beğeni isteği atılabilir (ref.read(apiServiceProvider).likeUser(user['id']))
                                       CustomSnackBar.show(
                                         context: context,

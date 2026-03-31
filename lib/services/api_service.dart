@@ -2,6 +2,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -675,15 +677,35 @@ class ApiService {
     }
   }
 
+  // Yardımcı Metot: Görsel Sıkıştırma
+  Future<File> _compressImage(File file) async {
+    final dir = await getTemporaryDirectory();
+    final targetPath =
+        '${dir.absolute.path}/temp_${DateTime.now().millisecondsSinceEpoch}.jpg';
+
+    var result = await FlutterImageCompress.compressAndGetFile(
+      file.absolute.path,
+      targetPath,
+      quality: 70, // %70 kalite ile boyut ciddi oranda düşer
+      minWidth: 1080,
+      minHeight: 1080,
+    );
+
+    return result != null ? File(result.path) : file;
+  }
+
   // Hikaye Yükle
   Future<Map<String, dynamic>> uploadStory(File imageFile) async {
     try {
       final token = await _storage.read(key: 'jwt_token');
-      String fileName = imageFile.path.split('/').last;
+
+      // Fotoğrafı sıkıştır
+      final compressedFile = await _compressImage(imageFile);
+      String fileName = compressedFile.path.split('/').last;
 
       FormData formData = FormData.fromMap({
         "media": await MultipartFile.fromFile(
-          imageFile.path,
+          compressedFile.path,
           filename: fileName,
         ),
       });
@@ -880,10 +902,11 @@ class ApiService {
 
   Future<Map<String, dynamic>> uploadChatMedia(File image) async {
     try {
+      final compressedFile = await _compressImage(image);
       final formData = FormData.fromMap({
         'media': await MultipartFile.fromFile(
-          image.path,
-          filename: image.path.split('/').last,
+          compressedFile.path,
+          filename: compressedFile.path.split('/').last,
         ),
       });
 

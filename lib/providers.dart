@@ -139,3 +139,27 @@ final notificationsListProvider = FutureProvider<List<dynamic>?>((ref) async {
   }
   return null;
 });
+
+// Beğenilen kullanıcıları globalde tutan NotifierProvider (Uygulama açık kaldığı sürece kalıcı)
+class LikedUsersNotifier extends Notifier<Set<int>> {
+  @override
+  Set<int> build() {
+    return {}; // Başlangıçta boş küme
+  }
+
+  void toggleLike(int userId) {
+    if (state.contains(userId)) {
+      // state = {...state}..remove(userId); // Gerekirse geri çekme eklenebilir
+    } else {
+      state = {...state, userId};
+    }
+  }
+
+  bool isLiked(int userId) {
+    return state.contains(userId);
+  }
+}
+
+final likedUsersProvider = NotifierProvider<LikedUsersNotifier, Set<int>>(() {
+  return LikedUsersNotifier();
+});

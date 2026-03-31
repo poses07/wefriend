@@ -47,5 +47,11 @@
 		<true/>
 		<key>UIStatusBarHidden</key>
 		<false/>
+		<key>NSCameraUsageDescription</key>
+		<string>Hikaye paylaşmak ve profil fotoğrafı çekmek için kameraya erişim gereklidir.</string>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>Hikaye paylaşmak ve profil fotoğrafı seçmek için galeriye erişim gereklidir.</string>
+		<key>NSMicrophoneUsageDescription</key>
+		<string>Video çekerken ses kaydetmek için mikrofona erişim gereklidir.</string>
 	</dict>
 </plist>

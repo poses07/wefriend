@@ -110,7 +110,7 @@ class StoryController {
         $uploadFilePath = $uploadDir . $fileName;
 
         if (move_uploaded_file($_FILES['media']['tmp_name'], $uploadFilePath)) {
-            // Base URL'yi 10.0.2.2'ye çeviriyoruz
+            // HTTPS bağlantı olduğundan emin olalım
             $media_url = "https://operasyon.milatsoft.com/uploads/stories/" . $fileName;
             
             // 24 saat geçerlilik süresi

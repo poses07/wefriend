@@ -6,6 +6,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'my_story_screen.dart';
 import 'notifications_screen.dart';
 import 'user_detail_screen.dart';
+import 'full_screen_camera_screen.dart'; // Eklenen yeni ekran
 import '../widgets/premium_avatar.dart';
 import '../widgets/premium_paywall_sheet.dart';
 import '../providers.dart';
@@ -24,92 +25,51 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   bool _isUploadingStory = false;
 
   Future<void> _pickStoryImage() async {
-    // Kullanıcıya Kamera veya Galeri seçeneği sunalım
-    final ImageSource? source = await showModalBottomSheet<ImageSource>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (BuildContext context) {
-        final cs = Theme.of(context).colorScheme;
-        return Container(
-          margin: const EdgeInsets.all(16),
-          padding: const EdgeInsets.symmetric(vertical: 24),
-          decoration: BoxDecoration(
-            color: cs.surface,
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Hikaye Paylaş',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: cs.onSurface,
-                ),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _buildMediaOption(
-                    context,
-                    icon: Icons.camera_alt_rounded,
-                    label: 'Kamera',
-                    color: Colors.blue,
-                    onTap: () => Navigator.pop(context, ImageSource.camera),
-                  ),
-                  _buildMediaOption(
-                    context,
-                    icon: Icons.photo_library_rounded,
-                    label: 'Galeri',
-                    color: Colors.purple,
-                    onTap: () => Navigator.pop(context, ImageSource.gallery),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        );
-      },
+    // Tam ekran kamera/galeri seçimine git
+    final String? pickedPath = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(builder: (context) => const FullScreenCameraScreen()),
     );
 
-    if (source == null) return; // Kullanıcı seçim yapmadan kapattı
+    if (pickedPath == null) return; // Kullanıcı seçim yapmadan kapattı
 
-    final picker = ImagePicker();
-    // Video özelliği için pickVideo kullanılabilir, şimdilik sadece fotoğraf (Image) mantığını Kamera/Galeri destekli yapıyoruz
-    final XFile? image = await picker.pickImage(source: source);
+    if (!mounted) return;
 
-    if (image != null) {
-      if (!mounted) return;
+    setState(() => _isUploadingStory = true);
 
-      setState(() => _isUploadingStory = true);
+    final result = await ref
+        .read(apiServiceProvider)
+        .uploadStory(File(pickedPath));
 
-      final result = await ref
-          .read(apiServiceProvider)
-          .uploadStory(File(image.path));
+    if (!mounted) return;
+    setState(() => _isUploadingStory = false);
 
-      if (!mounted) return;
-      setState(() => _isUploadingStory = false);
-
-      if (result['success'] == true) {
-        CustomSnackBar.show(
-          context: context,
-          message: 'Hikaye başarıyla paylaşıldı!',
-          type: NotificationType.success,
-        );
-        ref.invalidate(homeFeedProvider);
-      } else {
-        CustomSnackBar.show(
-          context: context,
-          message: result['message'] ?? 'Hikaye paylaşılamadı',
-          type: NotificationType.error,
-        );
-      }
+    if (result['success'] == true) {
+      CustomSnackBar.show(
+        context: context,
+        message: 'Hikaye başarıyla paylaşıldı!',
+        type: NotificationType.success,
+      );
+      // Hikayeler listesini yenile
+      ref.invalidate(storiesProvider);
+      // Ana akışı da yenileyelim
+      ref.invalidate(homeFeedProvider);
+    } else {
+      CustomSnackBar.show(
+        context: context,
+        message: result['message'] ?? 'Hikaye paylaşılamadı',
+        type: NotificationType.error,
+      );
     }
   }
 
-  Widget _buildMediaOption(BuildContext context, {required IconData icon, required String label, required Color color, required VoidCallback onTap}) {
+  Widget _buildMediaOption(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
     final cs = Theme.of(context).colorScheme;
     return GestureDetector(
       onTap: onTap,

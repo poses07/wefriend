@@ -192,10 +192,17 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                             color: Colors.blue.withValues(alpha: 0.1),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.camera_alt_rounded, color: Colors.blue, size: 32),
+                          child: const Icon(
+                            Icons.camera_alt_rounded,
+                            color: Colors.blue,
+                            size: 32,
+                          ),
                         ),
                         const SizedBox(height: 8),
-                        const Text('Kamera', style: TextStyle(fontWeight: FontWeight.w600)),
+                        const Text(
+                          'Kamera',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
                       ],
                     ),
                   ),
@@ -210,10 +217,17 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                             color: Colors.purple.withValues(alpha: 0.1),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.photo_library_rounded, color: Colors.purple, size: 32),
+                          child: const Icon(
+                            Icons.photo_library_rounded,
+                            color: Colors.purple,
+                            size: 32,
+                          ),
                         ),
                         const SizedBox(height: 8),
-                        const Text('Galeri', style: TextStyle(fontWeight: FontWeight.w600)),
+                        const Text(
+                          'Galeri',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
                       ],
                     ),
                   ),
@@ -293,12 +307,18 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   if (result['success']) {
                     // Başarılıysa veriyi yenile ve sayfadan çık
                     ref.invalidate(userProfileProvider);
-                    CustomSnackBar.show(
-                      context: context,
-                      message: 'Profil başarıyla güncellendi',
-                      type: NotificationType.success,
-                    );
-                    Navigator.of(context).pop();
+                    // Değişikliğin hemen yansıması için küçük bir gecikme ekliyoruz
+                    await Future.delayed(const Duration(milliseconds: 500));
+                    ref.invalidate(userProfileProvider);
+
+                    if (context.mounted) {
+                      CustomSnackBar.show(
+                        context: context,
+                        message: 'Profil başarıyla güncellendi',
+                        type: NotificationType.success,
+                      );
+                      Navigator.of(context).pop();
+                    }
                   } else {
                     CustomSnackBar.show(
                       context: context,

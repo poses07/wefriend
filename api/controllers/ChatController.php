@@ -365,7 +365,8 @@ class ChatController {
             exit();
         }
 
-        $uploadDir = __DIR__ . '/../../uploads/chat_media/';
+        // Sunucudaki ana dizine uploads klasörü oluştur (controllers'tan bir üst dizin)
+        $uploadDir = __DIR__ . '/../uploads/chat_media/';
         if (!is_dir($uploadDir)) {
             mkdir($uploadDir, 0777, true);
         }

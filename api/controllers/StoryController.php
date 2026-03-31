@@ -100,7 +100,8 @@ class StoryController {
             exit();
         }
 
-        $uploadDir = __DIR__ . '/../../uploads/stories/';
+        // Sunucudaki ana dizine uploads klasörü oluştur (controllers'tan bir üst dizin)
+        $uploadDir = __DIR__ . '/../uploads/stories/';
         if (!is_dir($uploadDir)) {
             mkdir($uploadDir, 0777, true);
         }

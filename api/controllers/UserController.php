@@ -142,7 +142,8 @@ class UserController {
         // Avatar Yükleme İşlemi (Eğer dosya gönderilmişse)
         $avatar_url = null;
         if (isset($_FILES['avatar']) && $_FILES['avatar']['error'] === UPLOAD_ERR_OK) {
-            $uploadDir = __DIR__ . '/../../uploads/avatars/';
+            // Sunucudaki ana dizine uploads klasörü oluştur (controllers'tan bir üst dizin)
+            $uploadDir = __DIR__ . '/../uploads/avatars/';
             if (!is_dir($uploadDir)) {
                 mkdir($uploadDir, 0777, true);
             }

@@ -369,18 +369,6 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
     final text = _messageController.text.trim();
     if (text.isEmpty || _myUserId == null) return;
 
-    // Önce UI'a ekleyelim (Optimistic UI update)
-    final tempMessage = {
-      'isMe': true,
-      'text': text,
-      'type': 'text',
-      'time': _formatTime(DateTime.now()),
-    };
-
-    setState(() {
-      _messages.add(tempMessage);
-    });
-
     _messageController.clear();
     _scrollToBottom();
 
@@ -388,7 +376,12 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
     final api = ref.read(apiServiceProvider);
     final result = await api.sendMessage(widget.chatId, text, type: 'text');
 
-    if (result['success'] != true) {
+    if (result['success'] == true && mounted) {
+      // Mesaj gönderildi. Manuel listeye eklemeye gerek yok.
+      // _fetchMessages timer'ı saniyede bir çalıştığı için veritabanından çekip ekrana basacak.
+      // Böylece çift (duplicate) görünüm hatası çözülmüş olur.
+      _scrollToBottom();
+    } else if (result['success'] != true) {
       // Gönderim başarısızsa kullanıcıya bildir
       if (mounted) {
         CustomSnackBar.show(
@@ -396,7 +389,6 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
           message: result['message'] ?? 'Mesaj gönderilemedi',
           type: NotificationType.error,
         );
-        // İstersen burada tempMessage'i listeden silebilirsin
       }
     }
   }
@@ -479,14 +471,10 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
       );
 
       if (sendResult['success'] == true && mounted) {
-        setState(() {
-          _messages.add({
-            'isMe': true,
-            'text': imageUrl,
-            'type': 'image',
-            'time': _formatTime(DateTime.now()),
-          });
-        });
+        // Fotoğraf başarıyla yüklendi ve mesaj olarak atıldı.
+        // Listeye manuel eklememize gerek yok çünkü _fetchMessages() her saniye çalışıp
+        // veritabanına kaydedilen yeni mesajı (fotoğrafı) zaten çekecek.
+        // Eğer manuel eklersek ve saniyelik çalışan _fetchMessages da aynısını çekerse ekranda 2 tane görünür.
         _scrollToBottom();
       }
     } else {
@@ -498,7 +486,13 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
     }
   }
 
-  Widget _buildMediaOption(BuildContext context, {required IconData icon, required String label, required Color color, required VoidCallback onTap}) {
+  Widget _buildMediaOption(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
     final cs = Theme.of(context).colorScheme;
     return GestureDetector(
       onTap: onTap,

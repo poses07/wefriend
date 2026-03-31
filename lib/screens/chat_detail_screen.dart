@@ -5,7 +5,6 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:permission_handler/permission_handler.dart';
 import '../providers.dart';
 import '../utils/custom_snackbar.dart';
 import '../widgets/premium_avatar.dart';
@@ -403,44 +402,60 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
   }
 
   Future<void> _sendImage() async {
-    // Galeri izni kontrolü
-    var status = await Permission.photos.status;
-    if (status.isDenied) {
-      status = await Permission.photos.request();
-    }
-
-    // Android 13+ (TIRAMISU) için photos izni yetmeyebilir, medya izni gerekebilir.
-    // Genel bir kontrol yapalım:
-    if (status.isPermanentlyDenied) {
-      if (!mounted) return;
-      showDialog(
-        context: context,
-        builder:
-            (context) => AlertDialog(
-              title: const Text('İzin Gerekli'),
-              content: const Text(
-                'Fotoğraf gönderebilmek için galeri erişimine izin vermeniz gerekiyor. Lütfen ayarlardan izni açın.',
+    // Kullanıcıya Kamera veya Galeri seçeneği sunalım
+    final ImageSource? source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        final cs = Theme.of(context).colorScheme;
+        return Container(
+          margin: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(vertical: 24),
+          decoration: BoxDecoration(
+            color: cs.surface,
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Fotoğraf Gönder',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: cs.onSurface,
+                ),
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('İptal'),
-                ),
-                TextButton(
-                  onPressed: () {
-                    openAppSettings();
-                    Navigator.pop(context);
-                  },
-                  child: const Text('Ayarlara Git'),
-                ),
-              ],
-            ),
-      );
-      return;
-    }
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _buildMediaOption(
+                    context,
+                    icon: Icons.camera_alt_rounded,
+                    label: 'Kamera',
+                    color: Colors.blue,
+                    onTap: () => Navigator.pop(context, ImageSource.camera),
+                  ),
+                  _buildMediaOption(
+                    context,
+                    icon: Icons.photo_library_rounded,
+                    label: 'Galeri',
+                    color: Colors.purple,
+                    onTap: () => Navigator.pop(context, ImageSource.gallery),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (source == null) return;
 
     final pickedFile = await _picker.pickImage(
-      source: ImageSource.gallery,
+      source: source,
       imageQuality: 70,
     );
     if (pickedFile == null || _myUserId == null) return;
@@ -481,6 +496,35 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
         type: NotificationType.error,
       );
     }
+  }
+
+  Widget _buildMediaOption(BuildContext context, {required IconData icon, required String label, required Color color, required VoidCallback onTap}) {
+    final cs = Theme.of(context).colorScheme;
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: color, size: 32),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: cs.onSurface,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override

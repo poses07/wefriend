@@ -287,7 +287,7 @@ class ApiService {
     try {
       final token = await _storage.read(key: 'jwt_token');
       final response = await http.get(
-        Uri.parse('$baseUrl/user/quests'),
+        Uri.parse('$baseUrl/quests'),
         headers: {
           'Authorization': 'Bearer $token',
           'Accept': 'application/json',

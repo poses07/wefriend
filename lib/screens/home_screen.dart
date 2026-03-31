@@ -24,8 +24,61 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   bool _isUploadingStory = false;
 
   Future<void> _pickStoryImage() async {
+    // Kullanıcıya Kamera veya Galeri seçeneği sunalım
+    final ImageSource? source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        final cs = Theme.of(context).colorScheme;
+        return Container(
+          margin: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(vertical: 24),
+          decoration: BoxDecoration(
+            color: cs.surface,
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Hikaye Paylaş',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: cs.onSurface,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _buildMediaOption(
+                    context,
+                    icon: Icons.camera_alt_rounded,
+                    label: 'Kamera',
+                    color: Colors.blue,
+                    onTap: () => Navigator.pop(context, ImageSource.camera),
+                  ),
+                  _buildMediaOption(
+                    context,
+                    icon: Icons.photo_library_rounded,
+                    label: 'Galeri',
+                    color: Colors.purple,
+                    onTap: () => Navigator.pop(context, ImageSource.gallery),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (source == null) return; // Kullanıcı seçim yapmadan kapattı
+
     final picker = ImagePicker();
-    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    // Video özelliği için pickVideo kullanılabilir, şimdilik sadece fotoğraf (Image) mantığını Kamera/Galeri destekli yapıyoruz
+    final XFile? image = await picker.pickImage(source: source);
 
     if (image != null) {
       if (!mounted) return;
@@ -45,7 +98,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           message: 'Hikaye başarıyla paylaşıldı!',
           type: NotificationType.success,
         );
-        // Hikayeleri yenilemek için sayfayı tazeleyebilir veya state'i güncelleyebiliriz
         ref.invalidate(homeFeedProvider);
       } else {
         CustomSnackBar.show(
@@ -55,6 +107,35 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         );
       }
     }
+  }
+
+  Widget _buildMediaOption(BuildContext context, {required IconData icon, required String label, required Color color, required VoidCallback onTap}) {
+    final cs = Theme.of(context).colorScheme;
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: color, size: 32),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: cs.onSurface,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override

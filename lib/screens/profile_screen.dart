@@ -493,6 +493,114 @@ class ProfileScreen extends ConsumerWidget {
                     ),
 
                     const SizedBox(height: 32),
+
+                    // Görevler Önizlemesi
+                    ref.watch(userQuestsProvider).when(
+                      data: (questsData) {
+                        if (questsData == null) return const SizedBox.shrink();
+                        final dailyQuests =
+                            questsData['daily'] as List<dynamic>? ?? [];
+                        if (dailyQuests.isEmpty) return const SizedBox.shrink();
+
+                        // Sadece ilk 2 görevi göster
+                        final previewQuests = dailyQuests.take(2).toList();
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Aktif Görevler',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: cs.onSurface,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            ...previewQuests.map((q) {
+                              final isCompleted =
+                                  q['is_completed'] == true ||
+                                  q['is_completed'] == 1;
+                              final progress = q['progress'] ?? 0;
+                              final target = q['target_count'] ?? 1;
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: cs.surfaceContainerHighest.withValues(
+                                    alpha: 0.3,
+                                  ),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: cs.outlineVariant.withValues(
+                                      alpha: 0.2,
+                                    ),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.star_rounded,
+                                      color: Colors.amber,
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            q['title'] ?? 'Görev',
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 6),
+                                          LinearProgressIndicator(
+                                            value:
+                                                (progress / target).clamp(
+                                                  0.0,
+                                                  1.0,
+                                                ),
+                                            backgroundColor: cs.outlineVariant
+                                                .withValues(alpha: 0.3),
+                                            color:
+                                                isCompleted
+                                                    ? Colors.green
+                                                    : cs.primary,
+                                            minHeight: 4,
+                                            borderRadius: BorderRadius.circular(
+                                              2,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      '$progress/$target',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        color:
+                                            isCompleted
+                                                ? Colors.green
+                                                : cs.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }),
+                            const SizedBox(height: 32),
+                          ],
+                        );
+                      },
+                      loading: () => const SizedBox.shrink(),
+                      error: (_, __) => const SizedBox.shrink(),
+                    ),
                   ],
                 ),
               ),

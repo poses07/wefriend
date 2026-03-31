@@ -26,6 +26,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
   late Future<List<Map<String, dynamic>>> _venuesFuture;
   late TabController _tabController;
   bool _isVenuesTabActive = false;
+  final Set<int> _likedUserIds = {}; // Beğenilen kullanıcıları takip etmek için
 
   @override
   void initState() {
@@ -433,35 +434,65 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
                                 _buildGlassButton(
                                   icon: Icons.chat_bubble_rounded,
                                   color: Colors.blue,
-                                  onTap: () {
-                                    // Mesaj atma işlemi
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder:
-                                            (context) => ChatDetailScreen(
-                                              chatId:
-                                                  0, // Yeni sohbet başlatma mantığı
-                                              otherUserId: user['id'],
-                                              userName:
-                                                  user['alias'] ?? 'Anonim',
-                                              avatarUrl:
-                                                  user['avatar_url'] ?? '',
-                                            ),
-                                      ),
+                                  onTap: () async {
+                                    // 1. Önce API'ye istek atıp chat_id alalım
+                                    final api = ref.read(apiServiceProvider);
+                                    final result = await api.startChat(
+                                      user['id'],
                                     );
+
+                                    if (!context.mounted) return;
+
+                                    if (result['success'] == true) {
+                                      final int newChatId = result['chat_id'];
+
+                                      // 2. Alınan gerçek chat_id ile ChatDetailScreen'e gidelim
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder:
+                                              (context) => ChatDetailScreen(
+                                                chatId: newChatId,
+                                                otherUserId: user['id'],
+                                                userName:
+                                                    user['alias'] ?? 'Anonim',
+                                                avatarUrl:
+                                                    user['avatar_url'] ?? '',
+                                              ),
+                                        ),
+                                      );
+                                    } else {
+                                      CustomSnackBar.show(
+                                        context: context,
+                                        message:
+                                            result['message'] ??
+                                            'Sohbet başlatılamadı',
+                                        type: NotificationType.error,
+                                      );
+                                    }
                                   },
                                 ),
                                 _buildGlassButton(
-                                  icon: Icons.favorite_rounded,
-                                  color: Colors.redAccent,
+                                  icon:
+                                      _likedUserIds.contains(user['id'])
+                                          ? Icons.favorite_rounded
+                                          : Icons.favorite_border_rounded,
+                                  color:
+                                      _likedUserIds.contains(user['id'])
+                                          ? Colors.red
+                                          : Colors.redAccent,
                                   onTap: () {
-                                    // Beğenme işlemi (şimdilik görsel, backend'e beğeni isteği atılabilir)
-                                    CustomSnackBar.show(
-                                      context: context,
-                                      message:
-                                          '${user['alias'] ?? 'Kullanıcı'} beğenildi!',
-                                      type: NotificationType.success,
-                                    );
+                                    if (!_likedUserIds.contains(user['id'])) {
+                                      setState(() {
+                                        _likedUserIds.add(user['id']);
+                                      });
+                                      // Backend'e beğeni isteği atılabilir (ref.read(apiServiceProvider).likeUser(user['id']))
+                                      CustomSnackBar.show(
+                                        context: context,
+                                        message:
+                                            '${user['alias'] ?? 'Kullanıcı'} beğenildi!',
+                                        type: NotificationType.success,
+                                      );
+                                    }
                                   },
                                 ),
                               ],

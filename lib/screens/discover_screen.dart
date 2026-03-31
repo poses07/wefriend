@@ -323,9 +323,8 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
               glowColor = Colors.orange.shade500;
             }
 
-            final avatarUrl = user['avatar_url'];
-            final hasAvatar =
-                avatarUrl != null && avatarUrl.toString().isNotEmpty;
+            final avatarUrl = user['avatar_url']?.toString();
+            final hasAvatar = avatarUrl != null && avatarUrl.isNotEmpty;
 
             return GestureDetector(
               onTap: () {
@@ -454,8 +453,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
                                                 otherUserId: user['id'],
                                                 userName:
                                                     user['alias'] ?? 'Anonim',
-                                                avatarUrl:
-                                                    user['avatar_url'] ?? '',
+                                                avatarUrl: avatarUrl ?? '',
                                               ),
                                         ),
                                       );

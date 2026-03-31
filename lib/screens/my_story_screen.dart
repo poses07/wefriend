@@ -178,17 +178,19 @@ class _MyStoryScreenState extends ConsumerState<MyStoryScreen> {
                               itemCount: viewers.length,
                               itemBuilder: (context, index) {
                                 final viewer = viewers[index];
-                                final avatarUrl = viewer['avatar_url'];
+                                final avatarUrl =
+                                    viewer['avatar_url']?.toString();
                                 return ListTile(
                                   leading: CircleAvatar(
                                     backgroundImage:
-                                        avatarUrl != null
+                                        avatarUrl != null &&
+                                                avatarUrl.isNotEmpty
                                             ? CachedNetworkImageProvider(
                                               avatarUrl,
                                             )
                                             : null,
                                     child:
-                                        avatarUrl == null
+                                        (avatarUrl == null || avatarUrl.isEmpty)
                                             ? const Icon(Icons.person)
                                             : null,
                                   ),

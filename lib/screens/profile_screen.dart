@@ -224,9 +224,10 @@ class ProfileScreen extends ConsumerWidget {
                               ),
                               child: ClipOval(
                                 child:
-                                    avatarUrl != null && avatarUrl.isNotEmpty
+                                    avatarUrl != null &&
+                                            avatarUrl.toString().isNotEmpty
                                         ? Image.network(
-                                          avatarUrl,
+                                          avatarUrl.toString(),
                                           fit: BoxFit.cover,
                                           errorBuilder: (
                                             context,

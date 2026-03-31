@@ -257,15 +257,49 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     ? null
                                     : () {
                                       if (hasMyStory) {
-                                        Navigator.of(context).push(
-                                          MaterialPageRoute(
-                                            builder:
-                                                (context) => MyStoryScreen(
-                                                  story:
-                                                      myStoryGroup!['stories'][0],
-                                                  isMyStory: true,
-                                                ),
-                                          ),
+                                        showModalBottomSheet(
+                                          context: context,
+                                          backgroundColor: Colors.transparent,
+                                          builder: (context) {
+                                            final cs = Theme.of(context).colorScheme;
+                                            return Container(
+                                              margin: const EdgeInsets.all(16),
+                                              decoration: BoxDecoration(
+                                                color: cs.surface,
+                                                borderRadius: BorderRadius.circular(24),
+                                              ),
+                                              child: Column(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  ListTile(
+                                                    leading: Icon(Icons.visibility_rounded, color: cs.primary),
+                                                    title: const Text('Hikayemi Gör'),
+                                                    onTap: () {
+                                                      Navigator.pop(context);
+                                                      Navigator.of(context).push(
+                                                        MaterialPageRoute(
+                                                          builder:
+                                                              (context) => MyStoryScreen(
+                                                                story: myStoryGroup!['stories'][0],
+                                                                isMyStory: true,
+                                                              ),
+                                                        ),
+                                                      );
+                                                    },
+                                                  ),
+                                                  Divider(height: 1, color: cs.outlineVariant.withValues(alpha: 0.2)),
+                                                  ListTile(
+                                                    leading: Icon(Icons.add_circle_outline_rounded, color: cs.primary),
+                                                    title: const Text('Yeni Hikaye Ekle'),
+                                                    onTap: () {
+                                                      Navigator.pop(context);
+                                                      _pickStoryImage();
+                                                    },
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                          },
                                         );
                                       } else {
                                         _pickStoryImage();

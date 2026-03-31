@@ -39,6 +39,63 @@ class _MyStoryScreenState extends ConsumerState<MyStoryScreen> {
     }
   }
 
+  Future<void> _deleteStory(BuildContext context) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Hikayeyi Sil'),
+            content: const Text(
+              'Bu hikayeyi silmek istediğinize emin misiniz?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('İptal'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Sil', style: TextStyle(color: Colors.red)),
+              ),
+            ],
+          ),
+    );
+
+    if (confirm != true) return;
+
+    if (!context.mounted) return;
+
+    // Yükleniyor göstergesi
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    final api = ref.read(apiServiceProvider);
+    final result = await api.deleteStory(widget.story['id']);
+
+    if (!context.mounted) return;
+    Navigator.pop(context); // Yükleniyor dialogunu kapat
+
+    if (result['success'] == true) {
+      CustomSnackBar.show(
+        context: context,
+        message: 'Hikaye silindi',
+        type: NotificationType.success,
+      );
+      ref.invalidate(storiesProvider);
+      ref.invalidate(homeFeedProvider);
+      Navigator.pop(context); // Hikaye ekranını kapat
+    } else {
+      CustomSnackBar.show(
+        context: context,
+        message: result['message'] ?? 'Hikaye silinemedi',
+        type: NotificationType.error,
+      );
+    }
+  }
+
   void _showBoostStore(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -322,6 +379,15 @@ class _MyStoryScreenState extends ConsumerState<MyStoryScreen> {
                           ),
                         ),
                         // Kapatma Butonu
+                        if (widget.isMyStory)
+                          IconButton(
+                            icon: const Icon(
+                              Icons.delete_outline_rounded,
+                              color: Colors.white,
+                              size: 28,
+                            ),
+                            onPressed: () => _deleteStory(context),
+                          ),
                         IconButton(
                           icon: const Icon(
                             Icons.close_rounded,

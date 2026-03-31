@@ -99,6 +99,7 @@ $router->add('GET', '/stories', 'StoryController', 'getStories');
 $router->add('POST', '/stories/add', 'StoryController', 'addStory');
 $router->add('POST', '/stories/view', 'StoryController', 'viewStory');
 $router->add('GET', '/stories/viewers', 'StoryController', 'getStoryViewers');
+$router->add('POST', '/stories/delete', 'StoryController', 'deleteStory');
 
 // İsteği işle
 $router->dispatch($method, $uri);

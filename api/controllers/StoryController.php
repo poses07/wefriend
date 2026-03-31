@@ -189,5 +189,40 @@ class StoryController {
 
         Response::json(200, "Görüntüleyenler getirildi.", $viewers);
     }
+
+    public function deleteStory() {
+        $user_id = $this->authenticate();
+        $data = json_decode(file_get_contents("php://input"), true);
+        $story_id = isset($data['story_id']) ? (int)$data['story_id'] : 0;
+
+        if ($story_id <= 0) {
+            Response::json(400, "Geçersiz hikaye ID'si.");
+            exit();
+        }
+
+        // Kendi hikayesi mi?
+        $stmt = $this->db->prepare("SELECT id, media_url FROM stories WHERE id = :story_id AND user_id = :user_id");
+        $stmt->execute([':story_id' => $story_id, ':user_id' => $user_id]);
+        $story = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$story) {
+            Response::json(403, "Hikaye bulunamadı veya silme yetkiniz yok.");
+            exit();
+        }
+
+        // Dosyayı sunucudan sil (opsiyonel)
+        $media_url = $story['media_url'];
+        $fileName = basename($media_url);
+        $filePath = __DIR__ . '/../uploads/stories/' . $fileName;
+        if (file_exists($filePath)) {
+            unlink($filePath);
+        }
+
+        // Veritabanından sil
+        $this->db->prepare("DELETE FROM story_views WHERE story_id = :story_id")->execute([':story_id' => $story_id]);
+        $this->db->prepare("DELETE FROM stories WHERE id = :story_id")->execute([':story_id' => $story_id]);
+
+        Response::json(200, "Hikaye başarıyla silindi.");
+    }
 }
 ?>

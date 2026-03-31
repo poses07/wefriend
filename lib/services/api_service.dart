@@ -708,6 +708,33 @@ class ApiService {
     }
   }
 
+  // Hikaye Sil
+  Future<Map<String, dynamic>> deleteStory(int storyId) async {
+    try {
+      final token = await _storage.read(key: 'jwt_token');
+      final response = await http.post(
+        Uri.parse('$baseUrl/stories/delete'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: jsonEncode({'story_id': storyId}),
+      );
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 && data['status'] == 'success') {
+        return {'success': true};
+      }
+      return {
+        'success': false,
+        'message': data['message'] ?? 'Hikaye silinemedi',
+      };
+    } catch (e) {
+      return {'success': false, 'message': 'Bağlantı hatası'};
+    }
+  }
+
   // Profil Bilgilerini Güncelle (Edit veya Onboarding)
   Future<Map<String, dynamic>> updateProfile({
     String? alias,

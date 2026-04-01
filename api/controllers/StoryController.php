@@ -92,6 +92,16 @@ class StoryController {
             ];
         }
 
+        // is_me (kendi hikayemiz) her zaman en başta olsun
+        usort($groupedStories, function($a, $b) {
+            if ($a['is_me']) return -1;
+            if ($b['is_me']) return 1;
+            // Kendi hikayemiz değilse, en son eklenen hikayeye göre sırala
+            $lastStoryA = end($a['stories'])['created_at'];
+            $lastStoryB = end($b['stories'])['created_at'];
+            return strtotime($lastStoryB) - strtotime($lastStoryA);
+        });
+
         Response::json(200, "Hikayeler getirildi.", array_values($groupedStories));
     }
 

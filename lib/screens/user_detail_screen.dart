@@ -183,6 +183,22 @@ class _UserDetailScreenState extends ConsumerState<UserDetailScreen> {
             ? _images.first
             : 'https://ui-avatars.com/api/?name=${widget.user['alias'] ?? 'User'}&size=512&background=random';
 
+    // Premium/Rank kontrolü
+    final rankStr = widget.user['rank_level'] ?? 'none';
+    Color rankColor = Colors.grey.shade400;
+    String rankLabel = 'Standart Üye';
+    IconData rankIcon = Icons.person;
+
+    if (rankStr == 'legendary') {
+      rankColor = Colors.purple.shade400;
+      rankLabel = 'Efsanevi Üye';
+      rankIcon = Icons.auto_awesome;
+    } else if (rankStr == 'popular') {
+      rankColor = Colors.orange.shade500;
+      rankLabel = 'Popüler Üye';
+      rankIcon = Icons.local_fire_department_rounded;
+    }
+
     return Scaffold(
       backgroundColor: Colors.black, // Arka plan tamamen siyah
       extendBodyBehindAppBar: true,
@@ -198,8 +214,22 @@ class _UserDetailScreenState extends ConsumerState<UserDetailScreen> {
                     child: CircularProgressIndicator(color: Colors.white),
                   ),
               errorWidget:
-                  (context, url, error) => const Center(
-                    child: Icon(Icons.error, color: Colors.white),
+                  (context, url, error) => Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.person, size: 80, color: Colors.white.withValues(alpha: 0.5)),
+                        const SizedBox(height: 16),
+                        Text(
+                          widget.user['alias'] ?? 'İsimsiz',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.5),
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
             ),
           ),
@@ -214,14 +244,14 @@ class _UserDetailScreenState extends ConsumerState<UserDetailScreen> {
                   colors: [
                     Colors.black.withValues(
                       alpha: 0.3,
-                    ), // Üstte hafif karartma (geri butonu için)
+                    ), // Üstte butonlar okunsun diye hafif karartı
                     Colors.transparent,
                     Colors.transparent,
                     Colors.black.withValues(alpha: 0.6),
                     Colors.black.withValues(alpha: 0.95),
                     Colors.black,
                   ],
-                  stops: const [0.0, 0.15, 0.4, 0.65, 0.85, 1.0],
+                  stops: const [0.0, 0.2, 0.5, 0.7, 0.9, 1.0],
                 ),
               ),
             ),
@@ -229,203 +259,209 @@ class _UserDetailScreenState extends ConsumerState<UserDetailScreen> {
 
           // 3. İçerik (Kaydırılabilir alan)
           SafeArea(
-            bottom: false,
             child: CustomScrollView(
               physics: const BouncingScrollPhysics(),
               slivers: [
-                // Üst boşluk
                 SliverToBoxAdapter(
-                  child: SizedBox(
-                    height: size.height * 0.45,
-                  ), // Fotoğrafın üst kısmını boş bırakır
+                  child: SizedBox(height: size.height * 0.45), // Fotoğrafın görünmesi için boşluk
                 ),
-
-                // Bilgiler
-                SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                  sliver: SliverList(
-                    delegate: SliverChildListDelegate([
-                      // İsim, Yaş, Cinsiyet
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Expanded(
-                            child: Wrap(
-                              crossAxisAlignment: WrapCrossAlignment.center,
-                              children: [
-                                Text(
-                                  '${widget.user['alias'] ?? 'İsimsiz'}${widget.user['age'] != null ? ', ${widget.user['age']}' : ''}',
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // İsim ve Yaş
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                widget.user['alias'] ?? 'İsimsiz',
+                                style: const TextStyle(
+                                  fontSize: 36,
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.white,
+                                  height: 1.1,
+                                ),
+                              ),
+                            ),
+                            if (widget.user['age'] != null)
+                              Padding(
+                                padding: const EdgeInsets.only(left: 12.0, bottom: 4),
+                                child: Text(
+                                  '${widget.user['age']}',
                                   style: const TextStyle(
-                                    fontSize: 36,
-                                    fontWeight: FontWeight.w900,
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.w300,
                                     color: Colors.white,
-                                    height: 1.1,
                                   ),
                                 ),
-                                if (widget.user['gender'] == 'Male' ||
-                                    widget.user['gender'] == 'Erkek') ...[
-                                  const SizedBox(width: 8),
-                                  const Icon(
-                                    Icons.male_rounded,
-                                    color: Colors.lightBlueAccent,
-                                    size: 32,
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Online ve Şehir Durumu
+                        Row(
+                          children: [
+                            Container(
+                              width: 10,
+                              height: 10,
+                              decoration: BoxDecoration(
+                                color: (widget.user['is_online'] == 1 || widget.user['is_online'] == true) 
+                                    ? Colors.greenAccent 
+                                    : Colors.grey,
+                                shape: BoxShape.circle,
+                                boxShadow: (widget.user['is_online'] == 1 || widget.user['is_online'] == true) 
+                                  ? [BoxShadow(color: Colors.greenAccent.withValues(alpha: 0.5), blurRadius: 6)] 
+                                  : null,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              (widget.user['is_online'] == 1 || widget.user['is_online'] == true) 
+                                  ? 'Şu an aktif' 
+                                  : 'Çevrimdışı',
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.9),
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 12.0),
+                              child: Text('•', style: TextStyle(color: Colors.white54)),
+                            ),
+                            Icon(Icons.location_on_rounded, size: 16, color: Colors.white.withValues(alpha: 0.7)),
+                            const SizedBox(width: 4),
+                            Text(
+                              widget.user['city'] ?? 'Bilinmeyen Konum',
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.9),
+                                fontSize: 15,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+
+                        // Rozet (Rank)
+                        if (rankStr != 'none')
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: rankColor.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: rankColor.withValues(alpha: 0.3), width: 1.5),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(rankIcon, color: rankColor, size: 20),
+                                const SizedBox(width: 8),
+                                Text(
+                                  rankLabel,
+                                  style: TextStyle(
+                                    color: rankColor,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                    letterSpacing: 0.5,
                                   ),
-                                ] else if (widget.user['gender'] == 'Female' ||
-                                    widget.user['gender'] == 'Kadın') ...[
-                                  const SizedBox(width: 8),
-                                  const Icon(
-                                    Icons.female_rounded,
-                                    color: Colors.pinkAccent,
-                                    size: 32,
-                                  ),
-                                ],
+                                ),
                               ],
                             ),
                           ),
-                          // Online Göstergesi
-                          if (widget.user['is_online'] == 1 ||
-                              widget.user['is_online'] == true)
-                            Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                color: Colors.greenAccent.withValues(
-                                  alpha: 0.2,
-                                ),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.circle,
-                                color: Colors.greenAccent,
-                                size: 12,
-                              ),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
+                        
+                        if (rankStr != 'none') const SizedBox(height: 24),
 
-                      // Konum
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.location_on_rounded,
-                            color: Colors.white.withValues(alpha: 0.7),
-                            size: 18,
+                        // Hakkında (Bio)
+                        if (widget.user['bio'] != null && widget.user['bio'].toString().isNotEmpty) ...[
+                          const Text(
+                            'Hakkında',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
                           ),
-                          const SizedBox(width: 6),
+                          const SizedBox(height: 12),
                           Text(
-                            '${widget.user['city'] ?? 'Bilinmeyen Konum'} • Yakınlarda',
+                            widget.user['bio'],
                             style: TextStyle(
                               fontSize: 16,
-                              fontWeight: FontWeight.w500,
                               color: Colors.white.withValues(alpha: 0.8),
+                              height: 1.5,
                             ),
+                          ),
+                          const SizedBox(height: 24),
+                        ],
+
+                        // Fiziksel Özellikler (Chip'ler)
+                        if (widget.user['height'] != null || widget.user['weight'] != null || widget.user['zodiac_sign'] != null) ...[
+                          const Text(
+                            'Temel Bilgiler',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 10,
+                            children: [
+                              if (widget.user['height'] != null)
+                                _buildGlassChip(
+                                  Icons.height,
+                                  '${widget.user['height']} cm',
+                                ),
+                              if (widget.user['weight'] != null)
+                                _buildGlassChip(
+                                  Icons.monitor_weight_outlined,
+                                  '${widget.user['weight']} kg',
+                                ),
+                              if (widget.user['zodiac_sign'] != null &&
+                                  widget.user['zodiac_sign'].toString().isNotEmpty)
+                                _buildGlassChip(
+                                  Icons.auto_awesome,
+                                  widget.user['zodiac_sign'],
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+                        ],
+
+                        // İlgi Alanları
+                        if (widget.user['interests'] != null &&
+                            widget.user['interests'].toString().isNotEmpty) ...[
+                          const Text(
+                            'İlgi Alanları',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 10,
+                            children: (widget.user['interests'] as String)
+                                .split(',')
+                                .map((interest) => _buildGlassChip(
+                                      Icons.star_rounded,
+                                      interest.trim(),
+                                    ))
+                                .toList(),
                           ),
                         ],
-                      ),
-                      const SizedBox(height: 24),
 
-                      // Fiziksel Özellikler (Chip'ler)
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          if (widget.user['height'] != null)
-                            _buildGlassChip(
-                              Icons.height,
-                              '${widget.user['height']} cm',
-                            ),
-                          if (widget.user['weight'] != null)
-                            _buildGlassChip(
-                              Icons.monitor_weight_outlined,
-                              '${widget.user['weight']} kg',
-                            ),
-                          if (widget.user['zodiac_sign'] != null &&
-                              widget.user['zodiac_sign'].toString().isNotEmpty)
-                            _buildGlassChip(
-                              Icons.auto_awesome,
-                              widget.user['zodiac_sign'],
-                            ),
-                        ],
-                      ),
-
-                      // İlgi Alanları
-                      if (widget.user['interests'] != null &&
-                          widget.user['interests'].toString().isNotEmpty) ...[
-                        const SizedBox(height: 32),
-                        const Text(
-                          'İlgi Alanları',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Wrap(
-                          spacing: 10,
-                          runSpacing: 10,
-                          children:
-                              widget.user['interests']
-                                  .toString()
-                                  .split(',')
-                                  .map((interest) {
-                                    return Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                        vertical: 10,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: cs.primary.withValues(
-                                          alpha: 0.15,
-                                        ),
-                                        borderRadius: BorderRadius.circular(20),
-                                        border: Border.all(
-                                          color: cs.primary.withValues(
-                                            alpha: 0.5,
-                                          ),
-                                          width: 1.5,
-                                        ),
-                                      ),
-                                      child: Text(
-                                        interest.trim(),
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                    );
-                                  })
-                                  .toList(),
-                        ),
+                        // En altta butonlar için boşluk
+                        const SizedBox(height: 120),
                       ],
-
-                      // Hakkında (Bio)
-                      if (widget.user['bio'] != null &&
-                          widget.user['bio'].toString().isNotEmpty) ...[
-                        const SizedBox(height: 32),
-                        const Text(
-                          'Hakkında',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          widget.user['bio'] ?? '',
-                          style: TextStyle(
-                            fontSize: 16,
-                            height: 1.5,
-                            color: Colors.white.withValues(alpha: 0.85),
-                          ),
-                        ),
-                      ],
-
-                      // En altta butonlar için boşluk
-                      const SizedBox(height: 140),
-                    ]),
+                    ),
                   ),
                 ),
               ],
@@ -452,73 +488,86 @@ class _UserDetailScreenState extends ConsumerState<UserDetailScreen> {
             ),
           ),
 
-          // 5. Sabit Alt Butonlar
+          // 5. Sabit Alt Buton (Mesaj Gönder)
           Positioned(
             bottom: 0,
             left: 0,
             right: 0,
             child: Container(
-              width: MediaQuery.of(context).size.width,
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+              padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(context).padding.bottom + 16),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.bottomCenter,
                   end: Alignment.topCenter,
                   colors: [
                     Colors.black,
-                    Colors.black.withValues(alpha: 0.8),
+                    Colors.black.withValues(alpha: 0.9),
                     Colors.transparent,
                   ],
                 ),
               ),
-              child: Center(
-                child: ElevatedButton(
-                  onPressed: () async {
-                    final api = ref.read(apiServiceProvider);
-                    final res = await api.startChat(
-                      int.tryParse(widget.user['id']?.toString() ?? '0') ?? 0,
-                    );
-                    if (!context.mounted) return;
-
-                    if (res['success']) {
-                      final chatId = res['data']['chat_id'];
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder:
-                              (context) => ChatDetailScreen(
-                                chatId: chatId,
-                                otherUserId:
-                                    int.tryParse(
-                                      widget.user['id']?.toString() ?? '0',
-                                    ) ??
-                                    0,
-                                userName: widget.user['alias'] ?? 'İsimsiz',
-                                avatarUrl: widget.user['avatar_url'],
-                                rankLevel: widget.user['rank_level'],
-                                isOnline:
-                                    widget.user['is_online'] == 1 ||
-                                    widget.user['is_online'] == true,
-                              ),
-                        ),
-                      );
-                    } else {
-                      CustomSnackBar.show(
-                        context: context,
-                        message: res['message'] ?? 'Sohbet başlatılamadı',
-                        type: NotificationType.error,
-                      );
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.all(18),
-                    backgroundColor: cs.primary,
-                    foregroundColor: Colors.white,
-                    shadowColor: cs.primary.withValues(alpha: 0.5),
-                    elevation: 10,
-                    shape: const CircleBorder(),
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: cs.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
                   ),
-                  child: const Icon(Icons.chat_bubble_rounded, size: 28),
+                  elevation: 8,
+                  shadowColor: cs.primary.withValues(alpha: 0.5),
+                ),
+                onPressed: () async {
+                  final api = ref.read(apiServiceProvider);
+                  final res = await api.startChat(
+                    int.tryParse(widget.user['id']?.toString() ?? '0') ?? 0,
+                  );
+                  if (!context.mounted) return;
+
+                  if (res['success']) {
+                    final chatId = res['data']['chat_id'];
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder:
+                            (context) => ChatDetailScreen(
+                              chatId: chatId,
+                              otherUserId:
+                                  int.tryParse(
+                                    widget.user['id']?.toString() ?? '0',
+                                  ) ??
+                                  0,
+                              userName: widget.user['alias'] ?? 'İsimsiz',
+                              avatarUrl: widget.user['avatar_url'],
+                              rankLevel: widget.user['rank_level'],
+                              isOnline:
+                                  widget.user['is_online'] == 1 ||
+                                  widget.user['is_online'] == true,
+                            ),
+                      ),
+                    );
+                  } else {
+                    CustomSnackBar.show(
+                      context: context,
+                      message: res['message'] ?? 'Sohbet başlatılamadı',
+                      type: NotificationType.error,
+                    );
+                  }
+                },
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.chat_bubble_rounded, size: 22),
+                    SizedBox(width: 12),
+                    Text(
+                      'Mesaj Gönder',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),

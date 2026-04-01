@@ -173,6 +173,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       setState(() {
         _profileImage = File(image.path);
       });
+
+      // Fotoğraf seçilince de kısa bir süre sonra direkt kayıt işlemini tetiklesin (Daha akıcı UX)
+      Future.delayed(const Duration(milliseconds: 600), () {
+        if (mounted && _currentPage == 3) {
+          _nextPage(); // 3. sayfadaysa bu direkt finishOnboarding'i çağırır
+        }
+      });
     }
   }
 
@@ -666,7 +673,20 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                               setState(() {
                                 _cityController.text = city;
                               });
-                              Navigator.pop(context);
+                              Navigator.pop(context); // Şehir seçiciyi kapat
+
+                              // Hem Yaş Hem Şehir seçildiyse otomatik 3. sayfaya geç
+                              if (_ageController.text.isNotEmpty &&
+                                  _cityController.text.isNotEmpty) {
+                                Future.delayed(
+                                  const Duration(milliseconds: 300),
+                                  () {
+                                    if (mounted && _currentPage == 1) {
+                                      _nextPage();
+                                    }
+                                  },
+                                );
+                              }
                             },
                           );
                         },

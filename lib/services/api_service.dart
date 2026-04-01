@@ -12,14 +12,11 @@ import '../main.dart';
 import '../screens/auth_screens.dart';
 
 class ApiService {
-  // Hem 10.0.2.2 hem de 192.168.1.3 reddediliyorsa sorun ağ yapılandırması değil
-  // Sorun direkt olarak Windows üzerindeki bir servisin HTTP isteklerini engellemesidir.
-  // Geliştirme sürecinde her türlü emülatörde kesin çalışan ngrok tarzı dışa açılan veya
-  // localhost'un en saf hali olan 127.0.0.1 kullanılabilir.
-  // Fakat Android Emulator 127.0.0.1'i kendi içindeki localhost olarak algılar.
-  // Bu yüzden en garanti yöntem XAMPP veya çalışan servisi 10.0.2.2:8000 üzerinden dinlemektir.
-  // Ancak önceki denemelerimizde port sorun yarattığı için direkt API'nin çalıştığı XAMPP IP'sini geri veriyorum.
-  static const String baseUrl = 'https://operasyon.milatsoft.com';
+  // Test aşamasında local sunucuya (XAMPP) bağlanmak için:
+  // Eğer fiziksel cihaz kullanıyorsan bilgisayarının yerel IP'sini yaz (Örn: 192.168.1.x)
+  // Eğer Android Emulator kullanıyorsan 10.0.2.2 kullan.
+  // Gerçek yayında 'https://operasyon.milatsoft.com/api' olarak değiştir.
+  static const String baseUrl = 'http://10.0.2.2/wefriend/api';
 
   final Dio _dio = Dio(
     BaseOptions(

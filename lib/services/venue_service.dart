@@ -25,20 +25,24 @@ class VenueService {
 
   /// Foursquare üzerinden yakındaki mekanları arar (Autocomplete için kullanılabilir)
   Future<List<Map<String, dynamic>>> searchFoursquareVenues(
-    String query, {
-    double lat = 41.0082,
-    double lng = 28.9784,
+    String? query, {
+    required double lat,
+    required double lng,
   }) async {
-    if (query.isEmpty) return [];
-
     try {
+      final Map<String, String> queryParams = {
+        'll': '$lat,$lng', // Enlem boylam (Örn: GPS'ten gelen)
+        'radius': '10000', // 10km yarıçap
+        'limit': '30',
+        'sort': 'DISTANCE',
+      };
+      
+      if (query != null && query.isNotEmpty) {
+        queryParams['query'] = query;
+      }
+
       final uri = Uri.parse('$_fsqBaseUrl/search').replace(
-        queryParameters: {
-          'query': query,
-          'll': '$lat,$lng', // Enlem boylam (Örn: İstanbul)
-          'radius': '10000', // 10km yarıçap
-          'limit': '10',
-        },
+        queryParameters: queryParams,
       );
 
       final response = await http.get(

@@ -53,5 +53,9 @@
 		<string>Hikaye paylaşmak ve profil fotoğrafı seçmek için galeriye erişim gereklidir.</string>
 		<key>NSMicrophoneUsageDescription</key>
 		<string>Video çekerken ses kaydetmek için mikrofona erişim gereklidir.</string>
+		<key>NSLocationWhenInUseUsageDescription</key>
+		<string>Yakındaki mekanları bulup check-in yapabilmeniz için konumunuza erişim gereklidir.</string>
+		<key>NSLocationAlwaysUsageDescription</key>
+		<string>Yakındaki mekanları bulup check-in yapabilmeniz için konumunuza erişim gereklidir.</string>
 	</dict>
 </plist>

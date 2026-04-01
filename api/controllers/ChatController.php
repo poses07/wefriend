@@ -289,6 +289,33 @@ class ChatController {
             $lastMsgText = $type == 'image' ? '📷 Fotoğraf' : $content;
             $update->execute([':content' => $lastMsgText, ':chat_id' => $chat_id]);
 
+            // FCM Bildirimi Gönder (Alıcıya)
+            require_once __DIR__ . '/../utils/FcmHelper.php';
+            $receiver_id = ($chat['user1_id'] == $user_id) ? $chat['user2_id'] : $chat['user1_id'];
+            
+            // Bildirimi gönderenin adını belirle (Anonimlik kuralı)
+            if ($chat['user1_id'] == $user_id) {
+                // Gönderen = Sohbeti başlatan (Anonim)
+                $senderName = $chat['anonymous_name'] ?? 'Gizemli Biri';
+            } else {
+                // Gönderen = Sohbeti alan (Gerçek profil)
+                $senderStmt = $this->db->prepare("SELECT alias FROM users WHERE id = :id LIMIT 1");
+                $senderStmt->execute([':id' => $user_id]);
+                $senderName = $senderStmt->fetchColumn() ?: 'Bir Kullanıcı';
+            }
+
+            FcmHelper::sendToUser(
+                $this->db, 
+                $receiver_id, 
+                $senderName, 
+                $lastMsgText, 
+                [
+                    'type' => 'chat_message',
+                    'chat_id' => $chat_id,
+                    'sender_id' => $user_id
+                ]
+            );
+
             // Görev ilerlemesi (Quest) - "3 kişiye mesaj at" vb. görevler için
             try {
                 // Sadece db üzerinden user_quests tablosunu güncelleyelim (basitçe)

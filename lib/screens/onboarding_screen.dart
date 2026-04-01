@@ -212,7 +212,38 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   void _nextPage() {
+    // 1. Sayfa (Cinsiyet) Validasyonu
+    if (_currentPage == 0 && _selectedGender == null) {
+      CustomSnackBar.show(
+        context: context,
+        message: 'Lütfen cinsiyetinizi seçin.',
+        type: NotificationType.error,
+      );
+      return;
+    }
+
+    // 2. Sayfa (Yaş ve Şehir) Validasyonu
+    if (_currentPage == 1) {
+      if (_ageController.text.isEmpty) {
+        CustomSnackBar.show(
+          context: context,
+          message: 'Lütfen yaşınızı girin.',
+          type: NotificationType.error,
+        );
+        return;
+      }
+      if (_cityController.text.isEmpty) {
+        CustomSnackBar.show(
+          context: context,
+          message: 'Lütfen şehrinizi seçin.',
+          type: NotificationType.error,
+        );
+        return;
+      }
+    }
+
     if (_currentPage < 3) {
+      FocusScope.of(context).unfocus();
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
@@ -417,7 +448,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     final cs = Theme.of(context).colorScheme;
 
     return GestureDetector(
-      onTap: () => setState(() => _selectedGender = gender),
+      onTap: () {
+        setState(() => _selectedGender = gender);
+        // Otomatik olarak sonraki sayfaya geç
+        Future.delayed(const Duration(milliseconds: 400), () {
+          if (mounted && _currentPage == 0) {
+            _nextPage();
+          }
+        });
+      },
       child: Container(
         width: 120,
         height: 140,

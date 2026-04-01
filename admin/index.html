@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WeFriend Admin Paneli</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; }
+        .sidebar { min-height: 100vh; background: #343a40; color: white; }
+        .sidebar a { color: #adb5bd; text-decoration: none; padding: 15px; display: block; border-bottom: 1px solid #495057; }
+        .sidebar a:hover, .sidebar a.active { background: #495057; color: white; }
+        .card-stat { border-left: 4px solid #0d6efd; }
+        #login-section { height: 100vh; display: flex; align-items: center; justify-content: center; }
+    </style>
+</head>
+<body>
+
+    <!-- LOGIN SCREEN -->
+    <div id="login-section">
+        <div class="card shadow" style="width: 400px;">
+            <div class="card-body p-5 text-center">
+                <h3 class="mb-4">WeFriend Admin</h3>
+                <div class="alert alert-danger d-none" id="login-error">Giriş başarısız.</div>
+                <div class="mb-3">
+                    <input type="text" id="login-phone" class="form-control" placeholder="Telefon Numarası">
+                </div>
+                <div class="mb-3">
+                    <input type="password" id="login-password" class="form-control" placeholder="Şifre">
+                </div>
+                <button class="btn btn-primary w-100" onclick="login()">Giriş Yap</button>
+                <p class="text-muted mt-3 small">Sadece 'is_admin = 1' olan hesaplar girebilir.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN DASHBOARD -->
+    <div id="main-section" class="d-none">
+        <div class="d-flex">
+            <!-- Sidebar -->
+            <div class="sidebar" style="width: 250px;">
+                <h4 class="text-center py-4 mb-0 bg-dark">WeFriend</h4>
+                <a href="#" class="active" onclick="showTab('dashboard')"><i class="fas fa-home me-2"></i> Dashboard</a>
+                <a href="#" onclick="showTab('users')"><i class="fas fa-users me-2"></i> Kullanıcılar</a>
+                <a href="#" onclick="showTab('reports')"><i class="fas fa-flag me-2"></i> Şikayetler</a>
+                <a href="#" class="text-danger mt-5" onclick="logout()"><i class="fas fa-sign-out-alt me-2"></i> Çıkış Yap</a>
+            </div>
+
+            <!-- Content -->
+            <div class="flex-grow-1 p-4">
+                
+                <!-- Dashboard Tab -->
+                <div id="tab-dashboard" class="tab-content">
+                    <h2 class="mb-4">Genel Bakış</h2>
+                    <div class="row g-4" id="stats-container">
+                        <!-- Stats will be loaded here -->
+                        <div class="col-12 text-center"><div class="spinner-border text-primary"></div></div>
+                    </div>
+                </div>
+
+                <!-- Users Tab -->
+                <div id="tab-users" class="tab-content d-none">
+                    <h2 class="mb-4">Kullanıcı Yönetimi</h2>
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Takma Ad</th>
+                                            <th>Telefon</th>
+                                            <th>Cinsiyet</th>
+                                            <th>Jeton</th>
+                                            <th>Durum</th>
+                                            <th>İşlemler</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="users-table-body">
+                                        <!-- Users will be loaded here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reports Tab -->
+                <div id="tab-reports" class="tab-content d-none">
+                    <h2 class="mb-4">Şikayetler (Reports)</h2>
+                    <div class="alert alert-info">Bu modül yakında aktif edilecek. (Veritabanında reports tablosu yapısı henüz standartlaşmadı)</div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- User Edit Modal -->
+    <div class="modal fade" id="editUserModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Kullanıcı Düzenle</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="edit-user-id">
+                    <div class="mb-3">
+                        <label>Jeton (Coins)</label>
+                        <input type="number" class="form-control" id="edit-coins">
+                    </div>
+                    <div class="mb-3">
+                        <label>Rank (VIP Seviyesi)</label>
+                        <select class="form-select" id="edit-rank">
+                            <option value="none">Normal</option>
+                            <option value="popular">Popular (VIP)</option>
+                            <option value="legendary">Legendary (V-VIP)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="button" class="btn btn-primary" onclick="saveUser()">Kaydet</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API_URL = '../api'; // Admin panel klasörünün api ile aynı dizinde (htdocs/wefriend/admin) olduğunu varsayıyoruz
+        let token = localStorage.getItem('admin_token');
+
+        // Sayfa yüklendiğinde token varsa direkt admin panele gir
+        if (token) {
+            showMain();
+            loadDashboard();
+        }
+
+        async function login() {
+            const phone = document.getElementById('login-phone').value;
+            const password = document.getElementById('login-password').value;
+
+            try {
+                const res = await fetch(`${API_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone, password })
+                });
+                const data = await res.json();
+
+                if (res.ok && data.status === 'success') {
+                    // Normalde burada dönen kullanıcının admin olup olmadığı backendden gelir.
+                    // Şimdilik tokenı alıp dashboarda istek atarak admin mi diye deniyoruz.
+                    token = data.data.token;
+                    localStorage.setItem('admin_token', token);
+                    showMain();
+                    loadDashboard();
+                } else {
+                    showError(data.message || 'Giriş başarısız');
+                }
+            } catch (e) {
+                showError('Sunucu bağlantı hatası');
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('admin_token');
+            token = null;
+            document.getElementById('main-section').classList.add('d-none');
+            document.getElementById('login-section').classList.remove('d-none');
+        }
+
+        function showMain() {
+            document.getElementById('login-section').classList.add('d-none');
+            document.getElementById('main-section').classList.remove('d-none');
+        }
+
+        function showError(msg) {
+            const err = document.getElementById('login-error');
+            err.textContent = msg;
+            err.classList.remove('d-none');
+        }
+
+        function showTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('d-none'));
+            document.querySelectorAll('.sidebar a').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById(`tab-${tabId}`).classList.remove('d-none');
+            event.currentTarget.classList.add('active');
+
+            if (tabId === 'dashboard') loadDashboard();
+            if (tabId === 'users') loadUsers();
+        }
+
+        async function fetchAdmin(endpoint, method = 'GET', body = null) {
+            const options = {
+                method,
+                headers: { 
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            };
+            if (body) options.body = JSON.stringify(body);
+
+            const res = await fetch(`${API_URL}/admin/${endpoint}`, options);
+            if (res.status === 401 || res.status === 403) {
+                alert('Oturum süresi doldu veya yetkiniz yok.');
+                logout();
+                return null;
+            }
+            return await res.json();
+        }
+
+        async function loadDashboard() {
+            const data = await fetchAdmin('dashboard');
+            if (!data) return;
+
+            const stats = data.data;
+            const container = document.getElementById('stats-container');
+            container.innerHTML = `
+                ${buildStatCard('Toplam Kullanıcı', stats.total_users, 'users', 'primary')}
+                ${buildStatCard('Aktif (24s)', stats.active_users_24h, 'user-clock', 'success')}
+                ${buildStatCard('Sohbet Odası', stats.total_chats, 'comments', 'info')}
+                ${buildStatCard('Toplam Mesaj', stats.total_messages, 'envelope', 'warning')}
+                ${buildStatCard('Aktif Hikaye', stats.active_stories, 'camera', 'danger')}
+                ${buildStatCard('Şikayetler', stats.total_reports, 'flag', 'secondary')}
+            `;
+        }
+
+        function buildStatCard(title, value, icon, color) {
+            return `
+                <div class="col-md-4">
+                    <div class="card card-stat shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="text-muted mb-2">${title}</h6>
+                                    <h3 class="mb-0 fw-bold">${value || 0}</h3>
+                                </div>
+                                <div class="bg-${color} bg-opacity-10 p-3 rounded">
+                                    <i class="fas fa-${icon} fa-2x text-${color}"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function loadUsers() {
+            const data = await fetchAdmin('users');
+            if (!data) return;
+
+            const tbody = document.getElementById('users-table-body');
+            tbody.innerHTML = '';
+
+            data.data.forEach(user => {
+                const isBanned = user.is_banned == 1;
+                const isAdmin = user.is_admin == 1;
+                
+                tbody.innerHTML += `
+                    <tr>
+                        <td>#${user.id}</td>
+                        <td><strong>${user.alias}</strong> ${isAdmin ? '<span class="badge bg-danger">Admin</span>' : ''}</td>
+                        <td>${user.phone}</td>
+                        <td>${user.gender || '-'}</td>
+                        <td><i class="fas fa-coins text-warning"></i> ${user.coins || 0}</td>
+                        <td>
+                            ${isBanned ? '<span class="badge bg-dark">Banlı</span>' : '<span class="badge bg-success">Aktif</span>'}
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary" onclick="openEditUser(${user.id}, ${user.coins || 0}, '${user.rank_level || 'none'}')">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="banUser(${user.id})">
+                                <i class="fas fa-ban"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        let editModal;
+        function openEditUser(id, coins, rank) {
+            document.getElementById('edit-user-id').value = id;
+            document.getElementById('edit-coins').value = coins;
+            document.getElementById('edit-rank').value = rank;
+            
+            if (!editModal) editModal = new bootstrap.Modal(document.getElementById('editUserModal'));
+            editModal.show();
+        }
+
+        async function saveUser() {
+            const id = document.getElementById('edit-user-id').value;
+            const coins = document.getElementById('edit-coins').value;
+            const rank = document.getElementById('edit-rank').value;
+
+            const res = await fetchAdmin('user/update', 'POST', { id, coins, rank_level: rank });
+            if (res && res.status === 'success') {
+                editModal.hide();
+                loadUsers(); // Refresh
+            } else {
+                alert('Güncelleme başarısız!');
+            }
+        }
+
+        async function banUser(id) {
+            if (confirm('Bu kullanıcıyı banlamak istediğinize emin misiniz? Uygulamaya giremeyecek.')) {
+                const res = await fetchAdmin('user/ban', 'POST', { user_id: id });
+                if (res && res.status === 'success') {
+                    loadUsers();
+                }
+            }
+        }
+    </script>
+</body>
+</html>

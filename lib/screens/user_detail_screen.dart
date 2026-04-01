@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../providers.dart';
 import '../utils/custom_snackbar.dart';
+import '../widgets/premium_avatar.dart';
 import 'chat_detail_screen.dart';
 import 'dart:ui';
 
@@ -22,7 +23,7 @@ class _UserDetailScreenState extends ConsumerState<UserDetailScreen> {
       return [url];
     }
     return [
-      'https://ui-avatars.com/api/?name=${widget.user['alias'] ?? 'User'}&size=512&background=random',
+      'https://ui-avatars.com/api/?name=${widget.user['alias'] ?? 'User'}&size=512&background=random&color=fff&bold=true',
     ];
   }
 
@@ -181,10 +182,15 @@ class _UserDetailScreenState extends ConsumerState<UserDetailScreen> {
     final primaryImageUrl =
         _images.isNotEmpty
             ? _images.first
-            : 'https://ui-avatars.com/api/?name=${widget.user['alias'] ?? 'User'}&size=512&background=random';
+            : 'https://ui-avatars.com/api/?name=${widget.user['alias'] ?? 'User'}&size=512&background=random&color=fff&bold=true';
 
     // Premium/Rank kontrolü
     final rankStr = widget.user['rank_level'] ?? 'none';
+
+    UserRank userRank = UserRank.none;
+    if (rankStr == 'legendary') userRank = UserRank.legendary;
+    if (rankStr == 'popular') userRank = UserRank.popular;
+
     Color rankColor = Colors.grey.shade400;
     String rankLabel = 'Standart Üye';
     IconData rankIcon = Icons.person;
@@ -277,36 +283,61 @@ class _UserDetailScreenState extends ConsumerState<UserDetailScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // İsim ve Yaş
+                        // İsim, Yaş ve Rozet
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            Expanded(
+                            Flexible(
                               child: Text(
                                 widget.user['alias'] ?? 'İsimsiz',
                                 style: const TextStyle(
-                                  fontSize: 36,
+                                  fontSize: 32,
                                   fontWeight: FontWeight.w900,
                                   color: Colors.white,
                                   height: 1.1,
+                                  shadows: [
+                                    Shadow(
+                                      offset: Offset(0, 2),
+                                      blurRadius: 4.0,
+                                      color: Colors.black45,
+                                    ),
+                                  ],
                                 ),
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                             if (widget.user['age'] != null)
                               Padding(
                                 padding: const EdgeInsets.only(
-                                  left: 12.0,
-                                  bottom: 4,
+                                  left: 8.0,
+                                  bottom: 2,
                                 ),
                                 child: Text(
                                   '${widget.user['age']}',
-                                  style: const TextStyle(
-                                    fontSize: 28,
-                                    fontWeight: FontWeight.w300,
-                                    color: Colors.white,
+                                  style: TextStyle(
+                                    fontSize: 26,
+                                    fontWeight: FontWeight.w400,
+                                    color: Colors.white.withValues(alpha: 0.9),
+                                    shadows: const [
+                                      Shadow(
+                                        offset: Offset(0, 2),
+                                        blurRadius: 4.0,
+                                        color: Colors.black45,
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ),
+                            const SizedBox(width: 8),
+                            if (rankStr != 'none') ...[
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 6.0),
+                                child: PremiumNameBadge(
+                                  rank: userRank,
+                                  size: 22,
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                         const SizedBox(height: 12),
@@ -315,61 +346,99 @@ class _UserDetailScreenState extends ConsumerState<UserDetailScreen> {
                         Row(
                           children: [
                             Container(
-                              width: 10,
-                              height: 10,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
                               decoration: BoxDecoration(
-                                color:
+                                color: Colors.black.withValues(alpha: 0.3),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.1),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 8,
+                                    height: 8,
+                                    decoration: BoxDecoration(
+                                      color:
+                                          (widget.user['is_online'] == 1 ||
+                                                  widget.user['is_online'] ==
+                                                      true ||
+                                                  widget.user['is_online'] ==
+                                                      '1')
+                                              ? Colors.greenAccent
+                                              : Colors.grey.shade400,
+                                      shape: BoxShape.circle,
+                                      boxShadow:
+                                          (widget.user['is_online'] == 1 ||
+                                                  widget.user['is_online'] ==
+                                                      true ||
+                                                  widget.user['is_online'] ==
+                                                      '1')
+                                              ? [
+                                                BoxShadow(
+                                                  color: Colors.greenAccent
+                                                      .withValues(alpha: 0.6),
+                                                  blurRadius: 8,
+                                                ),
+                                              ]
+                                              : null,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
                                     (widget.user['is_online'] == 1 ||
                                             widget.user['is_online'] == true ||
                                             widget.user['is_online'] == '1')
-                                        ? Colors.greenAccent
-                                        : Colors.grey,
-                                shape: BoxShape.circle,
-                                boxShadow:
-                                    (widget.user['is_online'] == 1 ||
-                                            widget.user['is_online'] == true ||
-                                            widget.user['is_online'] == '1')
-                                        ? [
-                                          BoxShadow(
-                                            color: Colors.greenAccent
-                                                .withValues(alpha: 0.5),
-                                            blurRadius: 6,
-                                          ),
-                                        ]
-                                        : null,
+                                        ? 'Aktif'
+                                        : 'Çevrimdışı',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            Text(
-                              (widget.user['is_online'] == 1 ||
-                                      widget.user['is_online'] == true ||
-                                      widget.user['is_online'] == '1')
-                                  ? 'Şu an aktif'
-                                  : 'Çevrimdışı',
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.9),
-                                fontSize: 15,
-                                fontWeight: FontWeight.w500,
+                            const SizedBox(width: 12),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
                               ),
-                            ),
-                            const Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 12.0),
-                              child: Text(
-                                '•',
-                                style: TextStyle(color: Colors.white54),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.3),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.1),
+                                  width: 1,
+                                ),
                               ),
-                            ),
-                            Icon(
-                              Icons.location_on_rounded,
-                              size: 16,
-                              color: Colors.white.withValues(alpha: 0.7),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              widget.user['city'] ?? 'Bilinmeyen Konum',
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.9),
-                                fontSize: 15,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.location_on_rounded,
+                                    size: 14,
+                                    color:
+                                        Theme.of(context).colorScheme.primary,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    widget.user['city'] ?? 'Gizli Konum',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
@@ -409,7 +478,7 @@ class _UserDetailScreenState extends ConsumerState<UserDetailScreen> {
                             ),
                           ),
 
-                        if (rankStr != 'none') const SizedBox(height: 24),
+                        // if (rankStr != 'none') const SizedBox(height: 24),
 
                         // Hakkında (Bio)
                         if (widget.user['bio'] != null &&

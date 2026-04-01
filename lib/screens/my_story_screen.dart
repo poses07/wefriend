@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'dart:async';
 import '../providers.dart';
 import '../utils/custom_snackbar.dart';
 
@@ -20,13 +21,60 @@ class MyStoryScreen extends ConsumerStatefulWidget {
   ConsumerState<MyStoryScreen> createState() => _MyStoryScreenState();
 }
 
-class _MyStoryScreenState extends ConsumerState<MyStoryScreen> {
+class _MyStoryScreenState extends ConsumerState<MyStoryScreen>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _progressController;
+  Timer? _autoAdvanceTimer;
+  final Duration _storyDuration = const Duration(seconds: 5);
+
   @override
   void initState() {
     super.initState();
+
+    _progressController = AnimationController(
+      vsync: this,
+      duration: _storyDuration,
+    )..addListener(() {
+      setState(() {});
+    });
+
+    _startStory();
+
     if (!widget.isMyStory) {
       _recordView();
     }
+  }
+
+  void _startStory() {
+    _progressController.forward(from: 0.0);
+    _autoAdvanceTimer?.cancel();
+    _autoAdvanceTimer = Timer(_storyDuration, () {
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+    });
+  }
+
+  void _pauseStory() {
+    _progressController.stop();
+    _autoAdvanceTimer?.cancel();
+  }
+
+  void _resumeStory() {
+    final remainingTime = _storyDuration * (1.0 - _progressController.value);
+    _progressController.forward();
+    _autoAdvanceTimer = Timer(remainingTime, () {
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _progressController.dispose();
+    _autoAdvanceTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _recordView() async {
@@ -182,17 +230,11 @@ class _MyStoryScreenState extends ConsumerState<MyStoryScreen> {
                                     viewer['avatar_url']?.toString();
                                 return ListTile(
                                   leading: CircleAvatar(
-                                    backgroundImage:
-                                        avatarUrl != null &&
-                                                avatarUrl.isNotEmpty
-                                            ? CachedNetworkImageProvider(
-                                              avatarUrl,
-                                            )
-                                            : null,
-                                    child:
-                                        (avatarUrl == null || avatarUrl.isEmpty)
-                                            ? const Icon(Icons.person)
-                                            : null,
+                                    backgroundImage: CachedNetworkImageProvider(
+                                      avatarUrl != null && avatarUrl.isNotEmpty
+                                          ? avatarUrl
+                                          : 'https://ui-avatars.com/api/?name=${viewer['alias'] ?? 'User'}&size=128&background=random&color=fff&bold=true',
+                                    ),
                                   ),
                                   title: Text(
                                     viewer['alias'] ?? 'Kullanıcı',
@@ -214,6 +256,27 @@ class _MyStoryScreenState extends ConsumerState<MyStoryScreen> {
     );
   }
 
+  String _getRelativeTime(String? createdAtStr) {
+    if (createdAtStr == null) return 'Biraz önce';
+
+    try {
+      final DateTime createdAt = DateTime.parse(createdAtStr);
+      final Duration difference = DateTime.now().difference(createdAt);
+
+      if (difference.inMinutes < 1) {
+        return 'Biraz önce';
+      } else if (difference.inMinutes < 60) {
+        return '${difference.inMinutes} dk önce';
+      } else if (difference.inHours < 24) {
+        return '${difference.inHours} saat önce';
+      } else {
+        return '${difference.inDays} gün önce';
+      }
+    } catch (e) {
+      return 'Biraz önce';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -224,6 +287,7 @@ class _MyStoryScreenState extends ConsumerState<MyStoryScreen> {
       backgroundColor: Colors.black,
       body: GestureDetector(
         onTapDown: (details) {
+          _pauseStory();
           final screenWidth = MediaQuery.of(context).size.width;
           final dx = details.globalPosition.dx;
           if (dx < screenWidth / 3) {
@@ -234,6 +298,8 @@ class _MyStoryScreenState extends ConsumerState<MyStoryScreen> {
             Navigator.pop(context);
           }
         },
+        onTapUp: (_) => _resumeStory(),
+        onTapCancel: () => _resumeStory(),
         child: Stack(
           children: [
             // Hikaye Fotoğrafı
@@ -301,11 +367,17 @@ class _MyStoryScreenState extends ConsumerState<MyStoryScreen> {
                     Row(
                       children: [
                         Expanded(
-                          child: Container(
-                            height: 3,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(2),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(2),
+                            child: LinearProgressIndicator(
+                              value: _progressController.value,
+                              backgroundColor: Colors.white.withValues(
+                                alpha: 0.3,
+                              ),
+                              valueColor: const AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
+                              minHeight: 3,
                             ),
                           ),
                         ),
@@ -322,25 +394,25 @@ class _MyStoryScreenState extends ConsumerState<MyStoryScreen> {
                               data: (myProfile) {
                                 // Eğer kendi hikayemse kendi avatarımı göster, değilse hikaye sahibinin (şimdilik kendi profili)
                                 dynamic avatarUrl;
+                                String fallbackName = 'User';
                                 if (widget.isMyStory) {
                                   avatarUrl = myProfile?['avatar_url'];
+                                  fallbackName = myProfile?['alias'] ?? 'Me';
                                 } else {
                                   avatarUrl =
                                       widget.ownerProfile?['avatar_url'];
+                                  fallbackName =
+                                      widget.ownerProfile?['alias'] ?? 'User';
                                 }
 
-                                if (avatarUrl != null &&
-                                    avatarUrl.toString().isNotEmpty) {
-                                  return CircleAvatar(
-                                    radius: 18,
-                                    backgroundImage: CachedNetworkImageProvider(
-                                      avatarUrl.toString(),
-                                    ),
-                                  );
-                                }
-                                return const CircleAvatar(
+                                return CircleAvatar(
                                   radius: 18,
-                                  child: Icon(Icons.person, size: 20),
+                                  backgroundImage: CachedNetworkImageProvider(
+                                    avatarUrl != null &&
+                                            avatarUrl.toString().isNotEmpty
+                                        ? avatarUrl.toString()
+                                        : 'https://ui-avatars.com/api/?name=$fallbackName&size=128&background=random&color=fff&bold=true',
+                                  ),
                                 );
                               },
                               loading:
@@ -370,9 +442,9 @@ class _MyStoryScreenState extends ConsumerState<MyStoryScreen> {
                                   fontSize: 16,
                                 ),
                               ),
-                              const Text(
-                                'Biraz önce',
-                                style: TextStyle(
+                              Text(
+                                _getRelativeTime(widget.story['created_at']),
+                                style: const TextStyle(
                                   color: Colors.white70,
                                   fontSize: 12,
                                 ),

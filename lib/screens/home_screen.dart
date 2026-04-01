@@ -388,20 +388,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                                               ),
                                                         ),
                                                       )
-                                                      : (myAvatarUrl != null
-                                                          ? CachedNetworkImage(
-                                                            imageUrl:
-                                                                myAvatarUrl,
-                                                            width: 64,
-                                                            height: 64,
-                                                            fit: BoxFit.cover,
-                                                          )
-                                                          : Icon(
-                                                            Icons.person,
-                                                            size: 64,
-                                                            color:
-                                                                cs.onSurfaceVariant,
-                                                          )),
+                                                      : CachedNetworkImage(
+                                                        imageUrl:
+                                                            myAvatarUrl !=
+                                                                        null &&
+                                                                    myAvatarUrl
+                                                                        .isNotEmpty
+                                                                ? myAvatarUrl
+                                                                : 'https://ui-avatars.com/api/?name=${myProfile?['alias'] ?? 'Me'}&size=128&background=random&color=fff&bold=true',
+                                                        width: 64,
+                                                        height: 64,
+                                                        fit: BoxFit.cover,
+                                                        errorWidget:
+                                                            (
+                                                              context,
+                                                              url,
+                                                              error,
+                                                            ) => Icon(
+                                                              Icons.person,
+                                                              size: 64,
+                                                              color:
+                                                                  cs.onSurfaceVariant,
+                                                            ),
+                                                      ),
                                             ),
                                           ),
                                         ),
@@ -497,19 +506,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                             ).scaffoldBackgroundColor,
                                       ),
                                       child: ClipOval(
-                                        child:
-                                            userAvatarUrl != null
-                                                ? CachedNetworkImage(
-                                                  imageUrl: userAvatarUrl,
-                                                  width: 64,
-                                                  height: 64,
-                                                  fit: BoxFit.cover,
-                                                )
-                                                : Icon(
-                                                  Icons.person,
-                                                  size: 64,
-                                                  color: cs.onSurfaceVariant,
-                                                ),
+                                        child: CachedNetworkImage(
+                                          imageUrl:
+                                              userAvatarUrl != null &&
+                                                      userAvatarUrl.isNotEmpty
+                                                  ? userAvatarUrl
+                                                  : 'https://ui-avatars.com/api/?name=$userAlias&size=128&background=random&color=fff&bold=true',
+                                          width: 64,
+                                          height: 64,
+                                          fit: BoxFit.cover,
+                                          errorWidget:
+                                              (context, url, error) => Icon(
+                                                Icons.person,
+                                                size: 64,
+                                                color: cs.onSurfaceVariant,
+                                              ),
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -698,6 +710,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                                     54, // Biraz daha minimal avatar
                                                 rank: userRank,
                                                 showBadge: false,
+                                                fallbackName:
+                                                    alias?.toString() ?? 'User',
                                               ),
                                               if (user['is_online'] == 1 ||
                                                   user['is_online'] == true ||
@@ -953,9 +967,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                                                 user['rank_level']
                                                                     ?.toString(),
                                                             isOnline:
-                                                                user['is_online'] == 1 ||
-                                                                user['is_online'] == true ||
-                                                                user['is_online'] == '1',
+                                                                user['is_online'] ==
+                                                                    1 ||
+                                                                user['is_online'] ==
+                                                                    true ||
+                                                                user['is_online'] ==
+                                                                    '1',
                                                           ),
                                                     ),
                                                   );

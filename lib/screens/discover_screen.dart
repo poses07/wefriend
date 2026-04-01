@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
+import 'dart:ui';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'dart:ui';
 import 'dart:async'; // Timer için
 import 'package:flutter/services.dart';
 import '../widgets/premium_paywall_sheet.dart';
@@ -329,6 +330,11 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
 
             final avatarUrl = user['avatar_url']?.toString();
             final hasAvatar = avatarUrl != null && avatarUrl.isNotEmpty;
+            final alias = user['alias'] ?? 'User';
+            final displayAvatarUrl =
+                hasAvatar
+                    ? avatarUrl
+                    : 'https://ui-avatars.com/api/?name=$alias&size=256&background=random&color=fff&bold=true';
 
             return GestureDetector(
               onTap: () {
@@ -349,13 +355,10 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
                             width: 2,
                           )
                           : null,
-                  image:
-                      hasAvatar
-                          ? DecorationImage(
-                            image: CachedNetworkImageProvider(avatarUrl),
-                            fit: BoxFit.cover,
-                          )
-                          : null,
+                  image: DecorationImage(
+                    image: CachedNetworkImageProvider(displayAvatarUrl),
+                    fit: BoxFit.cover,
+                  ),
                   boxShadow: [
                     BoxShadow(
                       color:
@@ -369,14 +372,6 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
                 ),
                 child: Stack(
                   children: [
-                    if (!hasAvatar)
-                      Center(
-                        child: Icon(
-                          Icons.person,
-                          size: 64,
-                          color: cs.onSurfaceVariant,
-                        ),
-                      ),
                     Positioned.fill(
                       child: Container(
                         decoration: BoxDecoration(
@@ -433,9 +428,9 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                               children: [
-                                _buildGlassButton(
-                                  icon: Icons.chat_bubble_rounded,
-                                  color: Colors.blue,
+                                _buildActionButton(
+                                  icon: CupertinoIcons.chat_bubble_text_fill,
+                                  color: Colors.blueAccent,
                                   onTap: () async {
                                     // 1. Önce API'ye istek atıp chat_id alalım
                                     final api = ref.read(apiServiceProvider);
@@ -472,13 +467,12 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
                                     }
                                   },
                                 ),
-                                _buildGlassButton(
-                                  icon: Icons.star_rounded,
-                                  color: Colors.amber,
+                                _buildActionButton(
+                                  icon: CupertinoIcons.star_fill,
+                                  color: Colors.amber.shade600,
                                   onTap: () async {
+                                    HapticFeedback.heavyImpact();
                                     final api = ref.read(apiServiceProvider);
-                                    HapticFeedback.mediumImpact();
-
                                     final result = await api.likeUser(
                                       user['id'],
                                       isSuperLike: true,
@@ -487,14 +481,11 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
                                     if (!context.mounted) return;
 
                                     if (result['success'] == true) {
-                                      CustomSnackBar.show(
-                                        context: context,
-                                        message:
-                                            '🌟 Süper Beğeni Gönderildi! (-50 Jeton)',
-                                        type: NotificationType.success,
-                                      );
+                                      final isMatch =
+                                          result['data'] != null &&
+                                          result['data']['is_match'] == true;
 
-                                      if (result['is_match'] == true) {
+                                      if (isMatch) {
                                         final myProfile =
                                             ref.read(userProfileProvider).value;
                                         MatchOverlay.show(
@@ -557,19 +548,23 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
                                     }
                                   },
                                 ),
-                                _buildGlassButton(
+                                _buildActionButton(
                                   icon:
                                       ref
                                               .watch(likedUsersProvider)
                                               .contains(user['id'])
-                                          ? Icons.favorite_rounded
-                                          : Icons.favorite_border_rounded,
+                                          ? CupertinoIcons.heart_solid
+                                          : CupertinoIcons.heart,
                                   color:
                                       ref
                                               .watch(likedUsersProvider)
                                               .contains(user['id'])
-                                          ? Colors.red
-                                          : Colors.redAccent,
+                                          ? Colors.redAccent
+                                          : Colors.pinkAccent,
+                                  isPrimary: true,
+                                  isSolid: ref
+                                      .watch(likedUsersProvider)
+                                      .contains(user['id']),
                                   onTap: () async {
                                     if (!ref
                                         .read(likedUsersProvider)
@@ -586,46 +581,55 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
 
                                       if (!context.mounted) return;
 
-                                      if (result['is_match'] == true) {
-                                        final myProfile =
-                                            ref.read(userProfileProvider).value;
-                                        MatchOverlay.show(
-                                          context,
-                                          myAvatarUrl:
-                                              myProfile?['avatar_url'] ?? '',
-                                          theirAvatarUrl: avatarUrl ?? '',
-                                          theirName: user['alias'] ?? 'İsimsiz',
-                                          onSendMessage: () async {
-                                            final chatRes = await api.startChat(
-                                              user['id'],
-                                            );
-                                            if (context.mounted &&
-                                                chatRes['success'] == true) {
-                                              Navigator.of(context).push(
-                                                MaterialPageRoute(
-                                                  builder:
-                                                      (
-                                                        context,
-                                                      ) => ChatDetailScreen(
-                                                        chatId:
-                                                            chatRes['chat_id'],
-                                                        otherUserId: user['id'],
-                                                        userName:
-                                                            user['alias'] ??
-                                                            'Anonim',
-                                                        avatarUrl:
-                                                            avatarUrl ?? '',
-                                                      ),
-                                                ),
-                                              );
-                                            }
-                                          },
-                                        );
-                                      } else {
-                                        HeartExplosionOverlay.show(
-                                          context,
-                                          isSuperLike: false,
-                                        );
+                                      if (result['success'] == true) {
+                                        final isMatch =
+                                            result['data'] != null &&
+                                            result['data']['is_match'] == true;
+
+                                        if (isMatch) {
+                                          final myProfile =
+                                              ref
+                                                  .read(userProfileProvider)
+                                                  .value;
+                                          MatchOverlay.show(
+                                            context,
+                                            myAvatarUrl:
+                                                myProfile?['avatar_url'] ?? '',
+                                            theirAvatarUrl: avatarUrl ?? '',
+                                            theirName:
+                                                user['alias'] ?? 'İsimsiz',
+                                            onSendMessage: () async {
+                                              final chatRes = await api
+                                                  .startChat(user['id']);
+                                              if (context.mounted &&
+                                                  chatRes['success'] == true) {
+                                                Navigator.of(context).push(
+                                                  MaterialPageRoute(
+                                                    builder:
+                                                        (
+                                                          context,
+                                                        ) => ChatDetailScreen(
+                                                          chatId:
+                                                              chatRes['chat_id'],
+                                                          otherUserId:
+                                                              user['id'],
+                                                          userName:
+                                                              user['alias'] ??
+                                                              'Anonim',
+                                                          avatarUrl:
+                                                              avatarUrl ?? '',
+                                                        ),
+                                                  ),
+                                                );
+                                              }
+                                            },
+                                          );
+                                        } else {
+                                          HeartExplosionOverlay.show(
+                                            context,
+                                            isSuperLike: false,
+                                          );
+                                        }
                                       }
                                     }
                                   },
@@ -834,28 +838,67 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
     );
   }
 
-  Widget _buildGlassButton({
+  Widget _buildActionButton({
     required IconData icon,
     required Color color,
     required VoidCallback onTap,
+    bool isPrimary = false,
+    bool isSolid = false,
   }) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: InkWell(
-          onTap: onTap,
+    return GestureDetector(
+      onTap: onTap,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(isPrimary ? 25 : 21),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
           child: Container(
-            padding: const EdgeInsets.all(8),
+            width: isPrimary ? 50 : 42,
+            height: isPrimary ? 50 : 42,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.15),
               shape: BoxShape.circle,
+              color:
+                  isSolid
+                      ? color.withValues(
+                        alpha: 0.85,
+                      ) // Dolu (kalp) için hafif şeffaf renk
+                      : Colors.white.withValues(
+                        alpha: 0.15,
+                      ), // Diğerleri için çok şeffaf beyaz (cam)
               border: Border.all(
-                color: Colors.white.withValues(alpha: 0.2),
-                width: 1,
+                color:
+                    isSolid
+                        ? color.withValues(alpha: 0.5)
+                        : Colors.white.withValues(alpha: 0.3),
+                width: 1.5, // Dış çerçeve efekti (Glassmorphism stroke)
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color:
+                      isSolid
+                          ? color.withValues(alpha: 0.3)
+                          : Colors.black.withValues(alpha: 0.1),
+                  blurRadius: 10,
+                  spreadRadius: 1,
+                  offset: const Offset(0, 4), // Aşağıya doğru hafif gölge
+                ),
+              ],
+            ),
+            child: Center(
+              child: Icon(
+                icon,
+                color: isSolid ? Colors.white : color,
+                size: isPrimary ? 26 : 22,
+                shadows: [
+                  Shadow(
+                    color:
+                        isSolid
+                            ? Colors.transparent
+                            : color.withValues(alpha: 0.5),
+                    blurRadius: 12, // İkonun içine neon glow efekti
+                  ),
+                ],
               ),
             ),
-            child: Icon(icon, color: color, size: 22),
           ),
         ),
       ),

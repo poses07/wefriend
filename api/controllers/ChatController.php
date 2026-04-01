@@ -62,74 +62,71 @@ class ChatController {
     public function getChats() {
         $user_id = $this->authenticate();
 
-        $query = "
-            SELECT 
-                c.id as chat_id,
-                c.anonymous_name,
-                c.last_message,
-                c.last_message_at,
-                u.id as other_user_id,
-                u.alias,
-                u.avatar_url,
-                u.rank_level,
-                IF(u.last_active >= NOW() - INTERVAL 5 MINUTE, 1, 0) as is_online,
-                c.user1_id,
-                c.user2_id,
-                (SELECT COUNT(id) FROM messages WHERE chat_id = c.id AND sender_id != :user_id1 AND is_read = 0) as unread_count
-            FROM chats c
-            JOIN users u ON (u.id = c.user1_id OR u.id = c.user2_id) AND u.id != :user_id2
-            WHERE (c.user1_id = :user_id3 OR c.user2_id = :user_id4)
-            AND c.last_message IS NOT NULL AND c.last_message != ''
-            AND (
-                (c.user1_id = :user_id7 AND c.is_deleted_by_u1 = 0) 
-                OR 
-                (c.user2_id = :user_id8 AND c.is_deleted_by_u2 = 0)
-            )
-            AND u.id NOT IN (SELECT blocked_id FROM user_blocks WHERE blocker_id = :user_id5)
-            AND u.id NOT IN (SELECT blocker_id FROM user_blocks WHERE blocked_id = :user_id6)
-            ORDER BY c.last_message_at DESC
-        ";
+        try {
+            $query = "
+                SELECT 
+                    c.id as chat_id,
+                    c.anonymous_name,
+                    c.last_message,
+                    c.last_message_at,
+                    u.id as other_user_id,
+                    u.alias,
+                    u.avatar_url,
+                    u.rank_level,
+                    IF(u.last_active >= NOW() - INTERVAL 5 MINUTE, 1, 0) as is_online,
+                    c.user1_id,
+                    c.user2_id,
+                    (SELECT COUNT(id) FROM messages WHERE chat_id = c.id AND sender_id != :user_id1 AND is_read = 0) as unread_count
+                FROM chats c
+                JOIN users u ON (u.id = c.user1_id OR u.id = c.user2_id) AND u.id != :user_id2
+                WHERE (c.user1_id = :user_id3 OR c.user2_id = :user_id4)
+                AND c.last_message IS NOT NULL AND c.last_message != ''
+                AND (
+                    (c.user1_id = :user_id7 AND c.is_deleted_by_u1 = 0) 
+                    OR 
+                    (c.user2_id = :user_id8 AND c.is_deleted_by_u2 = 0)
+                )
+                AND u.id NOT IN (SELECT blocked_id FROM user_blocks WHERE blocker_id = :user_id5)
+                AND u.id NOT IN (SELECT blocker_id FROM user_blocks WHERE blocked_id = :user_id6)
+                ORDER BY c.last_message_at DESC
+            ";
 
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([
-            ':user_id1' => $user_id,
-            ':user_id2' => $user_id,
-            ':user_id3' => $user_id,
-            ':user_id4' => $user_id,
-            ':user_id5' => $user_id,
-            ':user_id6' => $user_id,
-            ':user_id7' => $user_id,
-            ':user_id8' => $user_id,
-        ]);
-        $chats = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $stmt = $this->db->prepare($query);
+            $stmt->execute([
+                ':user_id1' => $user_id,
+                ':user_id2' => $user_id,
+                ':user_id3' => $user_id,
+                ':user_id4' => $user_id,
+                ':user_id5' => $user_id,
+                ':user_id6' => $user_id,
+                ':user_id7' => $user_id,
+                ':user_id8' => $user_id,
+            ]);
+            $chats = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Anonimlik mantığını uygula (Connected2.me)
-        foreach ($chats as &$chat) {
-            // user1_id: Sohbeti başlatan (Gönderen) -> Her zaman Anonim
-            // user2_id: Mesajı alan (Alıcı) -> Gerçek kimliği belli
-            
-            if ($user_id == $chat['user2_id']) {
-                // Biz alıcıyız. Karşı taraf (other_user_id) sohbeti başlatan (user1_id).
-                // Bu yüzden karşı taraf bize ANONİM görünmeli.
-                $chat['display_name'] = $chat['anonymous_name'];
-                $chat['avatar_url'] = null; // Anonim avatar
-                $chat['rank_level'] = 'none'; // Anonim rank
-                $chat['is_online'] = 0; // Anonim kullanıcının online durumu gizlenebilir (opsiyonel)
-            } else {
-                // Biz göndereniz (user_id == user1_id). Karşı taraf (other_user_id) alıcı (user2_id).
-                // Bu yüzden karşı taraf kendi GERÇEK profiliyle görünür.
-                $chat['display_name'] = $chat['alias'];
+            // Anonimlik mantığını uygula (Connected2.me)
+            foreach ($chats as &$chat) {
+                if ($user_id == $chat['user2_id']) {
+                    $chat['display_name'] = $chat['anonymous_name'];
+                    $chat['avatar_url'] = null; // Anonim avatar
+                    $chat['rank_level'] = 'none'; // Anonim rank
+                    $chat['is_online'] = 0; // Anonim kullanıcının online durumu gizlenebilir
+                } else {
+                    $chat['display_name'] = $chat['alias'];
+                }
+                
+                unset($chat['user1_id']);
+                unset($chat['user2_id']);
+                
+                // Okunmamış mesaj sayısını integer'a çevir
+                $chat['unread_count'] = (int)$chat['unread_count'];
+                $chat['is_new'] = $chat['unread_count'] > 0;
             }
-            
-            unset($chat['user1_id']);
-            unset($chat['user2_id']);
-            
-            // Okunmamış mesaj sayısını integer'a çevir
-            $chat['unread_count'] = (int)$chat['unread_count'];
-            $chat['is_new'] = $chat['unread_count'] > 0;
-        }
 
-        Response::json(200, "Sohbetler getirildi.", $chats);
+            Response::json(200, "Sohbetler getirildi.", $chats);
+        } catch (Exception $e) {
+            Response::json(200, "Sohbetler getirildi.", []);
+        }
     }
     // Belirli bir sohbetin mesaj geçmişini getir
     public function getMessages() {

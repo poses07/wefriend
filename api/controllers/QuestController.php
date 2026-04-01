@@ -33,47 +33,51 @@ class QuestController {
     public function getQuests() {
         $user_id = $this->authenticate();
 
-        // Aktif görevleri getir
-        $stmt = $this->db->query("SELECT * FROM quests WHERE is_active = 1");
-        $quests = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
         $response = ['daily' => [], 'weekly' => [], 'monthly' => []];
 
-        foreach ($quests as $q) {
-            // Kullanıcının bu görevdeki durumunu kontrol et
-            $stmt = $this->db->prepare("SELECT * FROM user_quests WHERE user_id = :u_id AND quest_id = :q_id ORDER BY created_at DESC LIMIT 1");
-            $stmt->execute([':u_id' => $user_id, ':q_id' => $q['id']]);
-            $user_quest = $stmt->fetch(PDO::FETCH_ASSOC);
+        try {
+            // Aktif görevleri getir
+            $stmt = $this->db->query("SELECT * FROM quests WHERE is_active = 1");
+            $quests = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // Eğer kayıt yoksa, sıfırdan ekle
-            if (!$user_quest) {
-                $stmt = $this->db->prepare("INSERT INTO user_quests (user_id, quest_id) VALUES (:u_id, :q_id)");
+            foreach ($quests as $q) {
+                // Kullanıcının bu görevdeki durumunu kontrol et
+                $stmt = $this->db->prepare("SELECT * FROM user_quests WHERE user_id = :u_id AND quest_id = :q_id ORDER BY created_at DESC LIMIT 1");
                 $stmt->execute([':u_id' => $user_id, ':q_id' => $q['id']]);
-                
-                $user_quest = [
-                    'id' => $this->db->lastInsertId(),
-                    'progress' => 0,
-                    'is_completed' => 0,
-                    'is_claimed' => 0
+                $user_quest = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                // Eğer kayıt yoksa, sıfırdan ekle
+                if (!$user_quest) {
+                    $stmt = $this->db->prepare("INSERT INTO user_quests (user_id, quest_id) VALUES (:u_id, :q_id)");
+                    $stmt->execute([':u_id' => $user_id, ':q_id' => $q['id']]);
+                    
+                    $user_quest = [
+                        'id' => $this->db->lastInsertId(),
+                        'progress' => 0,
+                        'is_completed' => 0,
+                        'is_claimed' => 0
+                    ];
+                }
+
+                $questData = [
+                    'quest_id' => $q['id'],
+                    'user_quest_id' => $user_quest['id'],
+                    'title' => $q['title'],
+                    'description' => $q['description'],
+                    'target_count' => $q['target_count'],
+                    'reward_xp' => $q['reward_xp'],
+                    'reward_coins' => $q['reward_coins'],
+                    'icon_name' => $q['icon_name'],
+                    'color_hex' => $q['color_hex'],
+                    'progress' => $user_quest['progress'],
+                    'is_completed' => $user_quest['is_completed'],
+                    'is_claimed' => $user_quest['is_claimed']
                 ];
+
+                $response[$q['quest_type']][] = $questData;
             }
-
-            $questData = [
-                'quest_id' => $q['id'],
-                'user_quest_id' => $user_quest['id'],
-                'title' => $q['title'],
-                'description' => $q['description'],
-                'target_count' => $q['target_count'],
-                'reward_xp' => $q['reward_xp'],
-                'reward_coins' => $q['reward_coins'],
-                'icon_name' => $q['icon_name'],
-                'color_hex' => $q['color_hex'],
-                'progress' => $user_quest['progress'],
-                'is_completed' => $user_quest['is_completed'],
-                'is_claimed' => $user_quest['is_claimed']
-            ];
-
-            $response[$q['quest_type']][] = $questData;
+        } catch (Exception $e) {
+            // Tablo yoksa veya hata oluşursa boş response dön
         }
 
         Response::json(200, "Görevler getirildi.", $response);
@@ -156,35 +160,39 @@ class QuestController {
 
     // Görev ilerlemesini artıran yardımcı metod (Diğer controller'lardan çağrılabilir)
     public static function incrementProgress($db, $user_id, $action_type, $amount = 1) {
-        $stmt = $db->prepare("SELECT id, target_count FROM quests WHERE action_type = :action AND is_active = 1");
-        $stmt->execute([':action' => $action_type]);
-        $quests = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        try {
+            $stmt = $db->prepare("SELECT id, target_count FROM quests WHERE action_type = :action AND is_active = 1");
+            $stmt->execute([':action' => $action_type]);
+            $quests = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        foreach ($quests as $q) {
-            $q_id = $q['id'];
-            $target = $q['target_count'];
+            foreach ($quests as $q) {
+                $q_id = $q['id'];
+                $target = $q['target_count'];
 
-            // Kullanıcının bu görevi var mı?
-            $checkStmt = $db->prepare("SELECT id FROM user_quests WHERE user_id = :u_id AND quest_id = :q_id");
-            $checkStmt->execute([':u_id' => $user_id, ':q_id' => $q_id]);
-            if ($checkStmt->rowCount() == 0) {
-                $db->prepare("INSERT INTO user_quests (user_id, quest_id) VALUES (:u_id, :q_id)")
-                   ->execute([':u_id' => $user_id, ':q_id' => $q_id]);
+                // Kullanıcının bu görevi var mı?
+                $checkStmt = $db->prepare("SELECT id FROM user_quests WHERE user_id = :u_id AND quest_id = :q_id");
+                $checkStmt->execute([':u_id' => $user_id, ':q_id' => $q_id]);
+                if ($checkStmt->rowCount() == 0) {
+                    $db->prepare("INSERT INTO user_quests (user_id, quest_id) VALUES (:u_id, :q_id)")
+                       ->execute([':u_id' => $user_id, ':q_id' => $q_id]);
+                }
+
+                // İlerlemeyi artır
+                $stmt = $db->prepare("
+                    UPDATE user_quests 
+                    SET progress = progress + :amount,
+                        is_completed = IF(progress + :amount >= :target, 1, 0)
+                    WHERE user_id = :u_id AND quest_id = :q_id AND is_completed = 0
+                ");
+                $stmt->execute([
+                    ':amount' => $amount,
+                    ':target' => $target,
+                    ':u_id' => $user_id,
+                    ':q_id' => $q_id
+                ]);
             }
-
-            // İlerlemeyi artır
-            $stmt = $db->prepare("
-                UPDATE user_quests 
-                SET progress = progress + :amount,
-                    is_completed = IF(progress + :amount >= :target, 1, 0)
-                WHERE user_id = :u_id AND quest_id = :q_id AND is_completed = 0
-            ");
-            $stmt->execute([
-                ':amount' => $amount,
-                ':target' => $target,
-                ':u_id' => $user_id,
-                ':q_id' => $q_id
-            ]);
+        } catch (Exception $e) {
+            // Tablo yoksa veya hata olursa sessizce geç, ana akışı bozma
         }
     }
 }

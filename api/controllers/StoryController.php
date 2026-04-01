@@ -80,7 +80,7 @@ class StoryController {
                     'alias' => $story['alias'],
                     'avatar_url' => $story['avatar_url'],
                     'rank_level' => $story['rank_level'],
-                    'is_me' => ((string)$u_id === (string)$user_id),
+                    'is_me' => ((int)$u_id === (int)$user_id),
                     'stories' => []
                 ];
             }

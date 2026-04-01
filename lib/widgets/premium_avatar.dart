@@ -9,6 +9,7 @@ class PremiumAvatar extends StatefulWidget {
   final double size;
   final UserRank rank;
   final bool showBadge;
+  final String fallbackName;
 
   const PremiumAvatar({
     super.key,
@@ -16,6 +17,7 @@ class PremiumAvatar extends StatefulWidget {
     this.size = 60.0,
     this.rank = UserRank.none,
     this.showBadge = true,
+    this.fallbackName = 'User',
   });
 
   @override
@@ -125,20 +127,20 @@ class _PremiumAvatarState extends State<PremiumAvatar> with SingleTickerProvider
             ) : null,
           ),
           child: ClipOval(
-            child: widget.imageUrl.isNotEmpty && widget.imageUrl.startsWith('http')
-                ? CachedNetworkImage(
-                    imageUrl: widget.imageUrl,
-                    fit: BoxFit.cover,
-                    placeholder: (context, url) => const Center(
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                    errorWidget: (context, url, error) => Icon(
-                      Icons.person,
-                      size: widget.size * 0.5,
-                      color: Colors.grey,
-                    ),
-                  )
-                : Icon(Icons.person, size: widget.size * 0.5, color: Colors.grey),
+            child: CachedNetworkImage(
+              imageUrl: widget.imageUrl.isNotEmpty && widget.imageUrl.startsWith('http')
+                  ? widget.imageUrl
+                  : 'https://ui-avatars.com/api/?name=${widget.fallbackName}&size=${(widget.size * 2).toInt()}&background=random&color=fff&bold=true',
+              fit: BoxFit.cover,
+              placeholder: (context, url) => const Center(
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              errorWidget: (context, url, error) => Icon(
+                Icons.person,
+                size: widget.size * 0.5,
+                color: Colors.grey,
+              ),
+            ),
           ),
         ),
 

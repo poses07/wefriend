@@ -16,7 +16,7 @@ class ApiService {
   // Eğer fiziksel cihaz kullanıyorsan bilgisayarının yerel IP'sini yaz (Örn: 192.168.1.x)
   // Eğer Android Emulator kullanıyorsan 10.0.2.2 kullan.
   // Gerçek yayında 'https://operasyon.milatsoft.com/api' olarak değiştir.
-  static const String baseUrl = 'http://10.0.2.2/wefriend/api';
+  static const String baseUrl = 'https://operasyon.milatsoft.com/api';
 
   final Dio _dio = Dio(
     BaseOptions(
@@ -264,19 +264,30 @@ class ApiService {
   // Profil Bilgilerini Getir
   Future<Map<String, dynamic>> getProfile() async {
     try {
-      final response = await _dio.get('/user/profile');
+      final token = await getToken();
+      final response = await http.get(
+        Uri.parse('$baseUrl/user/profile'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
 
-      if (response.statusCode == 200 && response.data['status'] == 'success') {
-        return {'success': true, 'data': response.data['data']};
-      }
-      return {'success': false, 'message': 'Profil alınamadı'};
-    } on DioException catch (e) {
-      if (e.response?.statusCode == 401) {
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map && decoded['status'] == 'success') {
+          return {'success': true, 'data': decoded['data']};
+        }
+      } else if (response.statusCode == 401) {
         await logout();
       }
+      return {'success': false, 'message': 'Profil alınamadı'};
+    } catch (e) {
+      debugPrint('getProfile HTTP Error: $e');
       return {
         'success': false,
-        'message': e.response?.data['message'] ?? 'Bağlantı hatası',
+        'message': 'Profil verisi işlenemedi (Bağlantı)',
       };
     }
   }

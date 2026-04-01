@@ -240,6 +240,7 @@ class ChatsScreen extends ConsumerWidget {
                                       size: 56,
                                       rank: rank,
                                       showBadge: false,
+                                      fallbackName: chat['display_name']?.toString() ?? 'User',
                                     ),
                                     if (chat['is_online'] == 1 ||
                                         chat['is_online'] ==

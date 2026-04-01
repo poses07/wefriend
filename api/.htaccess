@@ -8,5 +8,4 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 
 # Geri kalan tüm istekleri index.php'ye yönlendir
-# Doğrudan public_html içine atıldığı için /index.php şeklinde yönlendirmeliyiz
-RewriteRule ^(.*)$ /index.php?url=$1 [QSA,L]
+RewriteRule ^(.*)$ index.php?url=$1 [QSA,L]

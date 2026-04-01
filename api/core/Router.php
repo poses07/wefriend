@@ -15,34 +15,52 @@ class Router {
 
     // Gelen isteği doğru controller ve metoda yönlendirir
     public function dispatch($requestMethod, $requestUri) {
-        // GET ile gelen 'url' parametresini kontrol et (.htaccess'ten gelen yönlendirme)
-        if (isset($_GET['url'])) {
-            $requestUri = '/' . rtrim($_GET['url'], '/');
-        } else {
-            // Soru işaretinden (query string) sonrasını at
-            if (($pos = strpos($requestUri, '?')) !== false) {
-                $requestUri = substr($requestUri, 0, $pos);
-            }
+        $originalUri = $requestUri; // Hata mesajı için saklayalım
 
-            // Eğer URL'nin başında /api varsa (Flutter eski ayardan atıyorsa) onu temizle
-            $basePath = '/api'; 
-            if (strpos($requestUri, $basePath) === 0) {
-                $requestUri = substr($requestUri, strlen($basePath));
-            }
+        // Önce query string'i atalım
+        if (($pos = strpos($requestUri, '?')) !== false) {
+            $requestUri = substr($requestUri, 0, $pos);
+        }
 
-            // Eğer XAMPP gibi bir alt klasör üzerinden çalışıyorsa "/wefriend/api" veya "/wefriend" de gelebilir.
-            $basePath2 = '/wefriend/api';
-            if (strpos($requestUri, $basePath2) === 0) {
-                $requestUri = substr($requestUri, strlen($basePath2));
-            }
-            
-            $basePath3 = '/wefriend';
-            if (strpos($requestUri, $basePath3) === 0) {
-                $requestUri = substr($requestUri, strlen($basePath3));
+        // XAMPP veya alt klasör isimlerini sırayla temizle (en uzundan en kısaya)
+        $prefixesToRemove = [
+            '/wefriend/api',
+            '/wefriend',
+            '/api'
+        ];
+
+        foreach ($prefixesToRemove as $prefix) {
+            if (strpos($requestUri, $prefix) === 0) {
+                $requestUri = substr($requestUri, strlen($prefix));
+                break; // İlk eşleşeni sildiğinde dur, aksi halde fazla kırpabilir
             }
         }
 
-        // Olası bir çift slash durumunu veya boşluğu temizle
+        // .htaccess'ten gelen 'url' parametresini kullanmayı tercih edebiliriz, ama 
+        // bazen sunucu ayarlarından dolayı $_GET['url'] boş gelebilir veya eksik olabilir.
+        // Bu yüzden REQUEST_URI'yi kullanıp prefixleri temizlemek en garantisidir.
+        // Ancak .htaccess 'url' parametresi verdiyse, requestUri'yi ona göre de ezebiliriz.
+        if (isset($_GET['url']) && !empty($_GET['url'])) {
+            $urlParam = '/' . rtrim($_GET['url'], '/');
+            // Eğer $urlParam, zaten temizlediğimiz $requestUri ile uyuşmuyorsa, .htaccess'ten geleni kullan
+            // Örneğin XAMPP'da $_GET['url'] bazen "wefriend/api/auth/login" olarak tam yol gelir
+            // Bu yüzden $_GET['url'] içinde de aynı prefix temizliğini yapalım
+            foreach ($prefixesToRemove as $prefix) {
+                $prefixWithoutSlash = ltrim($prefix, '/');
+                if (strpos($urlParam, '/' . $prefixWithoutSlash) === 0) {
+                    $urlParam = substr($urlParam, strlen('/' . $prefixWithoutSlash));
+                    break;
+                }
+            }
+            $requestUri = $urlParam;
+        }
+
+        // URL sonundaki slash'i temizle (Eğer sadece '/' değilse)
+        if ($requestUri !== '/') {
+            $requestUri = rtrim($requestUri, '/');
+        }
+
+        // Boşluk kalırsa root kabul et
         if ($requestUri == '' || $requestUri == '/') {
             $requestUri = '/';
         }

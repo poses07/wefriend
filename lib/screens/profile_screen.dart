@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'edit_profile_screen.dart';
 import 'settings_screen.dart';
 import 'quests_screen.dart'; // Görevler ve Rozetler sayfası için eklendi
@@ -225,29 +226,21 @@ class ProfileScreen extends ConsumerWidget {
                                     Theme.of(context).scaffoldBackgroundColor,
                               ),
                               child: ClipOval(
-                                child:
-                                    avatarUrl != null &&
-                                            avatarUrl.toString().isNotEmpty
-                                        ? Image.network(
-                                          avatarUrl.toString(),
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (
-                                            context,
-                                            error,
-                                            stackTrace,
-                                          ) {
-                                            return Icon(
-                                              Icons.person,
-                                              size: 60,
-                                              color: cs.onSurfaceVariant,
-                                            );
-                                          },
-                                        )
-                                        : Icon(
-                                          Icons.person,
-                                          size: 60,
-                                          color: cs.onSurfaceVariant,
-                                        ),
+                                child: CachedNetworkImage(
+                                  imageUrl:
+                                      avatarUrl != null &&
+                                              avatarUrl.toString().isNotEmpty
+                                          ? avatarUrl.toString()
+                                          : 'https://ui-avatars.com/api/?name=$alias&size=256&background=random&color=fff&bold=true',
+                                  fit: BoxFit.cover,
+                                  errorWidget: (context, url, error) {
+                                    return Icon(
+                                      Icons.person,
+                                      size: 60,
+                                      color: cs.onSurfaceVariant,
+                                    );
+                                  },
+                                ),
                               ),
                             ),
                           ),
@@ -690,18 +683,31 @@ class ProfileScreen extends ConsumerWidget {
                         return ListTile(
                           leading: CircleAvatar(
                             backgroundColor: cs.surfaceContainerHighest,
-                            child:
-                                amIVip && v['avatar_url'] != null
-                                    ? ClipOval(
-                                      child: Image.network(
-                                        v['avatar_url'],
+                            child: ClipOval(
+                              child:
+                                  amIVip
+                                      ? CachedNetworkImage(
+                                        imageUrl:
+                                            v['avatar_url'] != null &&
+                                                    v['avatar_url']
+                                                        .toString()
+                                                        .isNotEmpty
+                                                ? v['avatar_url'].toString()
+                                                : 'https://ui-avatars.com/api/?name=${v['alias'] ?? 'User'}&size=128&background=random&color=fff&bold=true',
                                         fit: BoxFit.cover,
+                                        width: 40,
+                                        height: 40,
+                                        errorWidget:
+                                            (context, url, error) => const Icon(
+                                              Icons.person,
+                                              color: Colors.grey,
+                                            ),
+                                      )
+                                      : const Icon(
+                                        Icons.person,
+                                        color: Colors.grey,
                                       ),
-                                    )
-                                    : const Icon(
-                                      Icons.person,
-                                      color: Colors.grey,
-                                    ),
+                            ),
                           ),
                           title: Text(
                             amIVip

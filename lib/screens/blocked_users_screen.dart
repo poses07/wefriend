@@ -105,14 +105,11 @@ class _BlockedUsersScreenState extends ConsumerState<BlockedUsersScreen> {
                   final user = _blockedUsers[index];
                   return ListTile(
                     leading: CircleAvatar(
-                      backgroundImage:
-                          user['avatar_url'] != null
-                              ? CachedNetworkImageProvider(user['avatar_url'])
-                              : null,
-                      child:
-                          user['avatar_url'] == null
-                              ? const Icon(Icons.person)
-                              : null,
+                      backgroundImage: CachedNetworkImageProvider(
+                        user['avatar_url'] != null && user['avatar_url'].toString().isNotEmpty
+                            ? user['avatar_url'].toString()
+                            : 'https://ui-avatars.com/api/?name=${user['alias'] ?? 'User'}&size=128&background=random&color=fff&bold=true',
+                      ),
                     ),
                     title: Text(user['alias'] ?? 'İsimsiz'),
                     trailing: TextButton(

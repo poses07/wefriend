@@ -981,7 +981,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
                                               if (isFromFoursquare &&
                                                   option['distance'] != null)
                                                 Text(
-                                                  '${(option['distance'] as int)}m',
+                                                  '${option['distance']}m',
                                                   style: TextStyle(
                                                     fontSize: 10,
                                                     color: cs.onSurfaceVariant,

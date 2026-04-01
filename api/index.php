@@ -58,6 +58,8 @@ $router->add('GET', '/user/blocked', 'UserController', 'getBlockedUsers');
 $router->add('POST', '/user/report', 'UserController', 'reportUser');
 $router->add('POST', '/user/fcm_token', 'UserController', 'updateFcmToken');
 $router->add('POST', '/user/boost', 'UserController', 'boostProfile');
+$router->add('GET', '/user/visitors', 'UserController', 'getProfileVisitors');
+$router->add('POST', '/user/like', 'UserController', 'likeUser');
 
 // Görevler (Quests)
 require_once __DIR__ . '/controllers/QuestController.php';

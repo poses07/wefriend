@@ -600,6 +600,8 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                       itemBuilder: (context, index) {
                         final message = _messages[index];
                         final isMe = message['isMe'] as bool;
+                        final String senderRank = message['rank_level']?.toString() ?? 'none';
+                        final bool isSenderVip = senderRank == 'popular' || senderRank == 'legendary';
 
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 16.0),
@@ -709,9 +711,17 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                                                     begin: Alignment.topLeft,
                                                     end: Alignment.bottomRight,
                                                   )
-                                                  : null,
+                                                  : isSenderVip 
+                                                    ? LinearGradient(
+                                                        colors: senderRank == 'legendary' 
+                                                          ? [Colors.purple.shade900.withValues(alpha: 0.8), Colors.deepPurple.shade900.withValues(alpha: 0.8)]
+                                                          : [Colors.orange.shade900.withValues(alpha: 0.8), Colors.deepOrange.shade900.withValues(alpha: 0.8)],
+                                                        begin: Alignment.topLeft,
+                                                        end: Alignment.bottomRight,
+                                                      )
+                                                    : null,
                                           color:
-                                              isMe
+                                              isMe || isSenderVip
                                                   ? null
                                                   : cs.surfaceContainerHighest
                                                       .withValues(alpha: 0.8),
@@ -721,10 +731,19 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                                                     ? Colors.white.withValues(
                                                       alpha: 0.2,
                                                     )
-                                                    : cs.outlineVariant
+                                                    : isSenderVip 
+                                                      ? (senderRank == 'legendary' ? Colors.purpleAccent.withValues(alpha: 0.5) : Colors.orangeAccent.withValues(alpha: 0.5))
+                                                      : cs.outlineVariant
                                                         .withValues(alpha: 0.3),
-                                            width: 1,
+                                            width: isSenderVip ? 1.5 : 1,
                                           ),
+                                          boxShadow: isSenderVip && !isMe ? [
+                                            BoxShadow(
+                                              color: (senderRank == 'legendary' ? Colors.purpleAccent : Colors.orangeAccent).withValues(alpha: 0.2),
+                                              blurRadius: 10,
+                                              spreadRadius: 1,
+                                            )
+                                          ] : [],
                                         ),
                                         child: Column(
                                           crossAxisAlignment:

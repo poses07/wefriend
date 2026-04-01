@@ -66,10 +66,11 @@ class UserController {
     // Profil bilgilerini getirir
     public function getProfile() {
         $user_id = $this->authenticate();
+        $target_id = isset($_GET['user_id']) ? (int)$_GET['user_id'] : $user_id;
 
         $query = "SELECT id, uuid, alias, avatar_url, bio, age, gender, city, rank_level, xp_points, coins, interests, height, weight, zodiac_sign, created_at FROM users WHERE id = :id LIMIT 1";
         $stmt = $this->db->prepare($query);
-        $stmt->execute([':id' => $user_id]);
+        $stmt->execute([':id' => $target_id]);
 
         if ($stmt->rowCount() == 0) {
             Response::json(404, "Kullanıcı bulunamadı.");
@@ -77,6 +78,20 @@ class UserController {
         }
 
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        // Kendi profilimiz değilse, profil ziyareti kaydet
+        if ($target_id !== $user_id) {
+            try {
+                $viewStmt = $this->db->prepare("
+                    INSERT INTO profile_views (viewer_id, viewed_id, viewed_at) 
+                    VALUES (:viewer, :viewed, NOW())
+                    ON DUPLICATE KEY UPDATE viewed_at = NOW()
+                ");
+                $viewStmt->execute([':viewer' => $user_id, ':viewed' => $target_id]);
+            } catch (Exception $e) {
+                // Log the error silently
+            }
+        }
 
         // Kullanıcının kazandığı rozetleri (badges) çek
         $badgeQuery = "
@@ -86,7 +101,7 @@ class UserController {
             WHERE ub.user_id = :id
         ";
         $badgeStmt = $this->db->prepare($badgeQuery);
-        $badgeStmt->execute([':id' => $user_id]);
+        $badgeStmt->execute([':id' => $target_id]);
         
         $badges = [];
         if ($badgeStmt->rowCount() > 0) {
@@ -95,8 +110,16 @@ class UserController {
         $user['badges'] = $badges;
 
         // Şimdilik varsayılan istatistikler ekleyelim
+        // Eğer kendi profiliysek gerçek ziyaretçi sayısını göster
+        $viewsCount = 0;
+        if ($target_id === $user_id) {
+            $viewsStmt = $this->db->prepare("SELECT COUNT(*) FROM profile_views WHERE viewed_id = :id");
+            $viewsStmt->execute([':id' => $user_id]);
+            $viewsCount = (int)$viewsStmt->fetchColumn();
+        }
+
         $user['stats'] = [
-            'views' => 0,
+            'views' => $viewsCount,
             'likes' => 0
         ];
 
@@ -397,6 +420,31 @@ class UserController {
 
         Response::json(200, "Görevler başarıyla getirildi.", $questsData);
     }
+
+    // Profil ziyaretçilerini getirir (Sadece kendi profilimize bakanlar)
+    public function getProfileVisitors() {
+        $user_id = $this->authenticate();
+
+        $query = "
+            SELECT v.id as view_id, v.viewed_at, u.id as visitor_id, u.alias, u.avatar_url, u.gender, u.city, u.rank_level
+            FROM profile_views v
+            JOIN users u ON v.viewer_id = u.id
+            WHERE v.viewed_id = :user_id
+            ORDER BY v.viewed_at DESC
+            LIMIT 50
+        ";
+
+        $stmt = $this->db->prepare($query);
+        $stmt->execute([':user_id' => $user_id]);
+        $visitors = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Kullanıcı VIP değilse, avatar_url'leri blur efekti için gizleyebiliriz veya front-end'de blur yapabiliriz.
+        // Biz veriyi gönderelim, flutter tarafında blurlayalım ki VIP al diyelim.
+        
+        Response::json(200, "Ziyaretçiler getirildi.", $visitors);
+    }
+    // Kullanıcının profilini öne çıkarır (Boost)
+    // Sadece bir tane boostProfile fonksiyonu olmalı
     public function boostProfile() {
         $user_id = $this->authenticate();
         $data = json_decode(file_get_contents("php://input"), true);
@@ -419,12 +467,15 @@ class UserController {
         }
 
         try {
+            $this->db->beginTransaction();
+
             // Kullanıcının yeterli jetonu var mı kontrol et
             $stmt = $this->db->prepare("SELECT coins FROM users WHERE id = :id FOR UPDATE");
             $stmt->execute([':id' => $user_id]);
             $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if (!$user || $user['coins'] < $cost) {
+                $this->db->rollBack();
                 Response::json(400, "Yetersiz jeton.");
                 exit;
             }
@@ -447,9 +498,93 @@ class UserController {
                 ':expires_at_update' => $expires_at
             ]);
 
+            $this->db->commit();
             Response::json(200, "Profiliniz başarıyla öne çıkarıldı!");
         } catch (Exception $e) {
+            $this->db->rollBack();
             Response::json(500, "Hata oluştu.");
+        }
+    }
+
+    public function likeUser() {
+        $user_id = $this->authenticate();
+        $data = json_decode(file_get_contents("php://input"), true);
+
+        if (!isset($data['target_id'])) {
+            Response::json(400, "Eksik bilgi.");
+            exit;
+        }
+
+        $target_id = (int)$data['target_id'];
+        $is_super_like = isset($data['is_super_like']) ? filter_var($data['is_super_like'], FILTER_VALIDATE_BOOLEAN) : false;
+
+        if ($user_id == $target_id) {
+            Response::json(400, "Kendinizi beğenemezsiniz.");
+            exit;
+        }
+
+        try {
+            $this->db->beginTransaction();
+
+            // Eğer süper beğeni ise 50 jeton kes
+            if ($is_super_like) {
+                $stmt = $this->db->prepare("SELECT coins FROM users WHERE id = :id FOR UPDATE");
+                $stmt->execute([':id' => $user_id]);
+                $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                if (!$user || $user['coins'] < 50) {
+                    $this->db->rollBack();
+                    Response::json(400, "Süper beğeni için yeterli jetonunuz yok (50 Jeton gerekli).");
+                    exit;
+                }
+
+                $this->db->prepare("UPDATE users SET coins = coins - 50 WHERE id = :id")->execute([':id' => $user_id]);
+                
+                // Fcm bildirimi gönder (Super Like)
+                require_once __DIR__ . '/../utils/FcmHelper.php';
+                FcmHelper::sendToUser($this->db, $target_id, "Süper Beğeni! 🌟", "Biri sana Süper Beğeni gönderdi! Kim olduğunu öğrenmek için tıkla.");
+            }
+
+            // Tabloyu oluştur (eğer yoksa)
+            $this->db->exec("CREATE TABLE IF NOT EXISTS user_likes (
+                id INT AUTO_INCREMENT PRIMARY KEY, 
+                liker_id INT, 
+                liked_id INT, 
+                is_super_like BOOLEAN DEFAULT FALSE, 
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
+                UNIQUE KEY(liker_id, liked_id)
+            )");
+
+            $stmt = $this->db->prepare("
+                INSERT INTO user_likes (liker_id, liked_id, is_super_like) 
+                VALUES (:liker, :liked, :super)
+                ON DUPLICATE KEY UPDATE is_super_like = GREATEST(is_super_like, :super2)
+            ");
+            $stmt->execute([
+                ':liker' => $user_id,
+                ':liked' => $target_id,
+                ':super' => $is_super_like ? 1 : 0,
+                ':super2' => $is_super_like ? 1 : 0
+            ]);
+
+            // Eşleşme (Match) Kontrolü
+            $matchCheck = $this->db->prepare("SELECT id FROM user_likes WHERE liker_id = :target AND liked_id = :me");
+            $matchCheck->execute([':target' => $target_id, ':me' => $user_id]);
+            
+            $is_match = false;
+            if ($matchCheck->rowCount() > 0) {
+                $is_match = true;
+                // İki tarafa da bildirim atılabilir
+                require_once __DIR__ . '/../utils/FcmHelper.php';
+                FcmHelper::sendToUser($this->db, $target_id, "Yeni Eşleşme! 💖", "Biriyle eşleştin! Hemen sohbete başla.");
+            }
+
+            $this->db->commit();
+            
+            Response::json(200, "Beğeni gönderildi.", ['is_match' => $is_match, 'is_super_like' => $is_super_like]);
+        } catch (Exception $e) {
+            $this->db->rollBack();
+            Response::json(500, "Hata oluştu: " . $e->getMessage());
         }
     }
 }

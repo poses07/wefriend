@@ -3,10 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'dart:ui';
 import 'dart:async'; // Timer için
+import 'package:flutter/services.dart';
 import '../widgets/premium_paywall_sheet.dart';
 import '../widgets/premium_avatar.dart';
 import '../widgets/filter_sheet.dart';
 import '../widgets/checkin_bottom_sheet.dart';
+import '../widgets/match_overlay.dart';
+import '../widgets/heart_explosion_overlay.dart';
 import 'venue_detail_screen.dart';
 import '../services/venue_service.dart';
 import 'user_detail_screen.dart';
@@ -470,6 +473,91 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
                                   },
                                 ),
                                 _buildGlassButton(
+                                  icon: Icons.star_rounded,
+                                  color: Colors.amber,
+                                  onTap: () async {
+                                    final api = ref.read(apiServiceProvider);
+                                    HapticFeedback.mediumImpact();
+
+                                    final result = await api.likeUser(
+                                      user['id'],
+                                      isSuperLike: true,
+                                    );
+
+                                    if (!context.mounted) return;
+
+                                    if (result['success'] == true) {
+                                      CustomSnackBar.show(
+                                        context: context,
+                                        message:
+                                            '🌟 Süper Beğeni Gönderildi! (-50 Jeton)',
+                                        type: NotificationType.success,
+                                      );
+
+                                      if (result['is_match'] == true) {
+                                        final myProfile =
+                                            ref.read(userProfileProvider).value;
+                                        MatchOverlay.show(
+                                          context,
+                                          myAvatarUrl:
+                                              myProfile?['avatar_url'] ?? '',
+                                          theirAvatarUrl: avatarUrl ?? '',
+                                          theirName: user['alias'] ?? 'İsimsiz',
+                                          onSendMessage: () async {
+                                            final chatRes = await api.startChat(
+                                              user['id'],
+                                            );
+                                            if (context.mounted &&
+                                                chatRes['success'] == true) {
+                                              Navigator.of(context).push(
+                                                MaterialPageRoute(
+                                                  builder:
+                                                      (
+                                                        context,
+                                                      ) => ChatDetailScreen(
+                                                        chatId:
+                                                            chatRes['chat_id'],
+                                                        otherUserId: user['id'],
+                                                        userName:
+                                                            user['alias'] ??
+                                                            'Anonim',
+                                                        avatarUrl:
+                                                            avatarUrl ?? '',
+                                                      ),
+                                                ),
+                                              );
+                                            }
+                                          },
+                                        );
+                                      } else {
+                                        HeartExplosionOverlay.show(
+                                          context,
+                                          isSuperLike: true,
+                                        );
+                                      }
+                                    } else {
+                                      CustomSnackBar.show(
+                                        context: context,
+                                        message: result['message'] ?? 'Hata',
+                                        type: NotificationType.error,
+                                      );
+                                      // Yetersiz bakiye ise paywall aç
+                                      if (result['message'].toString().contains(
+                                        'jeton',
+                                      )) {
+                                        showModalBottomSheet(
+                                          context: context,
+                                          isScrollControlled: true,
+                                          backgroundColor: Colors.transparent,
+                                          builder:
+                                              (context) =>
+                                                  const PremiumPaywallSheet(),
+                                        );
+                                      }
+                                    }
+                                  },
+                                ),
+                                _buildGlassButton(
                                   icon:
                                       ref
                                               .watch(likedUsersProvider)
@@ -482,20 +570,63 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
                                               .contains(user['id'])
                                           ? Colors.red
                                           : Colors.redAccent,
-                                  onTap: () {
+                                  onTap: () async {
                                     if (!ref
                                         .read(likedUsersProvider)
                                         .contains(user['id'])) {
+                                      HapticFeedback.lightImpact();
                                       ref
                                           .read(likedUsersProvider.notifier)
                                           .toggleLike(user['id']);
-                                      // Backend'e beğeni isteği atılabilir (ref.read(apiServiceProvider).likeUser(user['id']))
-                                      CustomSnackBar.show(
-                                        context: context,
-                                        message:
-                                            '${user['alias'] ?? 'Kullanıcı'} beğenildi!',
-                                        type: NotificationType.success,
+
+                                      final api = ref.read(apiServiceProvider);
+                                      final result = await api.likeUser(
+                                        user['id'],
                                       );
+
+                                      if (!context.mounted) return;
+
+                                      if (result['is_match'] == true) {
+                                        final myProfile =
+                                            ref.read(userProfileProvider).value;
+                                        MatchOverlay.show(
+                                          context,
+                                          myAvatarUrl:
+                                              myProfile?['avatar_url'] ?? '',
+                                          theirAvatarUrl: avatarUrl ?? '',
+                                          theirName: user['alias'] ?? 'İsimsiz',
+                                          onSendMessage: () async {
+                                            final chatRes = await api.startChat(
+                                              user['id'],
+                                            );
+                                            if (context.mounted &&
+                                                chatRes['success'] == true) {
+                                              Navigator.of(context).push(
+                                                MaterialPageRoute(
+                                                  builder:
+                                                      (
+                                                        context,
+                                                      ) => ChatDetailScreen(
+                                                        chatId:
+                                                            chatRes['chat_id'],
+                                                        otherUserId: user['id'],
+                                                        userName:
+                                                            user['alias'] ??
+                                                            'Anonim',
+                                                        avatarUrl:
+                                                            avatarUrl ?? '',
+                                                      ),
+                                                ),
+                                              );
+                                            }
+                                          },
+                                        );
+                                      } else {
+                                        HeartExplosionOverlay.show(
+                                          context,
+                                          isSuperLike: false,
+                                        );
+                                      }
                                     }
                                   },
                                 ),

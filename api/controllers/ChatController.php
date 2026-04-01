@@ -158,10 +158,12 @@ class ChatController {
         }
 
         // Mesajları çek (Yeniden eskiye doğru çekip Flutter'da tersine çevireceğiz)
-        $query = "SELECT id, sender_id, content, message_type, is_read, created_at 
-                  FROM messages 
-                  WHERE chat_id = :chat_id 
-                  ORDER BY created_at DESC 
+        // Kullanıcının rank_level bilgisini de çekiyoruz (VIP balonlar için)
+        $query = "SELECT m.id, m.sender_id, m.content, m.message_type, m.is_read, m.created_at, u.rank_level 
+                  FROM messages m
+                  JOIN users u ON m.sender_id = u.id
+                  WHERE m.chat_id = :chat_id 
+                  ORDER BY m.created_at DESC 
                   LIMIT :limit OFFSET :offset";
         
         $stmt = $this->db->prepare($query);
@@ -183,6 +185,11 @@ class ChatController {
             $msg['text'] = $msg['content'];
             $msg['type'] = $msg['message_type'];
             $msg['time'] = date('H:i', strtotime($msg['created_at']));
+            
+            // Eğer isMe ise rank level'ımızı ekle, değilse karşı tarafınkini (zaten sorguda u.rank_level olarak geldi)
+            // Ancak kendi mesajlarımızın rank'ini kullanmıyoruz çünkü sadece karşı tarafın (bize gelen) VIP balonları farklı renkte.
+            // Ama yine de Flutter patlamasın diye rank_level var.
+            
             unset($msg['content']);
             unset($msg['message_type']);
         }

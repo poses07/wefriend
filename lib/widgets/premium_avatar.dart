@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'dart:math' as math;
 
 enum UserRank { none, popular, legendary }
 
-class PremiumAvatar extends StatelessWidget {
+class PremiumAvatar extends StatefulWidget {
   final String imageUrl;
   final double size;
   final UserRank rank;
@@ -18,98 +19,166 @@ class PremiumAvatar extends StatelessWidget {
   });
 
   @override
+  State<PremiumAvatar> createState() => _PremiumAvatarState();
+}
+
+class _PremiumAvatarState extends State<PremiumAvatar> with SingleTickerProviderStateMixin {
+  late AnimationController _rotationController;
+
+  @override
+  void initState() {
+    super.initState();
+    _rotationController = AnimationController(
+      duration: const Duration(seconds: 4),
+      vsync: this,
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _rotationController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     List<Color> frameColors;
     IconData? badgeIcon;
     List<Color>? badgeColors;
 
-    // Rank'e göre renkleri ve ikonları belirle
-    switch (rank) {
+    // 2026 Trendi: Yüksek kontrastlı neon gradientler ve animasyonlar
+    switch (widget.rank) {
       case UserRank.popular:
-        frameColors = [Colors.amber.shade300, Colors.orange.shade600];
+        frameColors = [
+          const Color(0xFFFFD700), // Altın Sarısı
+          const Color(0xFFFF8C00), // Koyu Turuncu
+          const Color(0xFFFF3D00), // Ateş Kırmızısı
+          const Color(0xFFFFD700), // Döngü için tekrar Altın Sarısı
+        ];
         badgeIcon = Icons.local_fire_department_rounded;
-        badgeColors = [Colors.amber.shade400, Colors.orange.shade600];
+        badgeColors = [const Color(0xFFFF8C00), const Color(0xFFFF3D00)];
         break;
       case UserRank.legendary:
-        frameColors = [Colors.purple.shade300, Colors.deepPurple.shade600];
+        frameColors = [
+          const Color(0xFF00E5FF), // Neon Mavi
+          const Color(0xFFD500F9), // Neon Mor
+          const Color(0xFFFF1744), // Neon Pembe/Kırmızı
+          const Color(0xFF00E5FF), // Döngü için tekrar Neon Mavi
+        ];
         badgeIcon = Icons.diamond_rounded;
-        badgeColors = [Colors.purple.shade400, Colors.deepPurple.shade700];
+        badgeColors = [const Color(0xFFD500F9), const Color(0xFFFF1744)];
         break;
       case UserRank.none:
         final cs = Theme.of(context).colorScheme;
         frameColors = [
-          cs.primary.withValues(alpha: 0.5),
-          cs.secondary.withValues(alpha: 0.5),
+          cs.outlineVariant.withValues(alpha: 0.3),
+          cs.outlineVariant.withValues(alpha: 0.3),
         ];
         break;
     }
+
+    final bool isPremium = widget.rank != UserRank.none;
 
     return Stack(
       alignment: Alignment.center,
       clipBehavior: Clip.none,
       children: [
-        // Dış Çerçeve (Gradient)
+        // Dış Çerçeve (Animasyonlu Gradient)
+        if (isPremium)
+          AnimatedBuilder(
+            animation: _rotationController,
+            builder: (context, child) {
+              return Transform.rotate(
+                angle: _rotationController.value * 2 * math.pi,
+                child: Container(
+                  width: widget.size + 6, // Dışa taşan aura payı
+                  height: widget.size + 6,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: SweepGradient(
+                      colors: frameColors,
+                      stops: const [0.0, 0.33, 0.66, 1.0],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: badgeColors!.first.withValues(alpha: 0.6),
+                        blurRadius: widget.size * 0.3,
+                        spreadRadius: 2,
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+
+        // Profil Fotoğrafı ve İç Çerçeve
         Container(
-          width: size,
-          height: size,
+          width: widget.size,
+          height: widget.size,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            gradient: LinearGradient(
-              colors: frameColors,
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            boxShadow:
-                rank != UserRank.none
-                    ? [
-                      BoxShadow(
-                        color: frameColors.last.withValues(alpha: 0.4),
-                        blurRadius: size * 0.2,
-                        offset: const Offset(0, 2),
-                      ),
-                    ]
-                    : [],
+            color: Theme.of(context).scaffoldBackgroundColor,
+            border: isPremium ? Border.all(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              width: 3,
+            ) : null,
           ),
-          child: Padding(
-            padding: EdgeInsets.all(rank != UserRank.none ? 2.5 : 1.5),
-            child: Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Theme.of(context).scaffoldBackgroundColor,
-                image:
-                    imageUrl.isNotEmpty && imageUrl.startsWith('http')
-                        ? DecorationImage(
-                          image: CachedNetworkImageProvider(imageUrl),
-                          fit: BoxFit.cover,
-                        )
-                        : null,
-              ),
-              child:
-                  imageUrl.isEmpty || !imageUrl.startsWith('http')
-                      ? Icon(Icons.person, size: size * 0.5, color: Colors.grey)
-                      : null,
-            ),
+          child: ClipOval(
+            child: widget.imageUrl.isNotEmpty && widget.imageUrl.startsWith('http')
+                ? CachedNetworkImage(
+                    imageUrl: widget.imageUrl,
+                    fit: BoxFit.cover,
+                    placeholder: (context, url) => const Center(
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    errorWidget: (context, url, error) => Icon(
+                      Icons.person,
+                      size: widget.size * 0.5,
+                      color: Colors.grey,
+                    ),
+                  )
+                : Icon(Icons.person, size: widget.size * 0.5, color: Colors.grey),
           ),
         ),
 
-        // Rozet İkonu
-        if (showBadge &&
-            rank != UserRank.none &&
-            badgeIcon != null &&
-            badgeColors != null)
+        // Rozet İkonu (3D efektli)
+        if (widget.showBadge && isPremium && badgeIcon != null && badgeColors != null)
           Positioned(
-            bottom: -(size * 0.08),
+            bottom: -(widget.size * 0.05),
             child: Container(
-              padding: EdgeInsets.all(size * 0.05),
+              padding: EdgeInsets.all(widget.size * 0.08),
               decoration: BoxDecoration(
-                gradient: LinearGradient(colors: badgeColors),
+                gradient: LinearGradient(
+                  colors: badgeColors,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
                 shape: BoxShape.circle,
                 border: Border.all(
                   color: Theme.of(context).scaffoldBackgroundColor,
-                  width: size * 0.03,
+                  width: 2.5,
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: badgeColors.last.withValues(alpha: 0.5),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
-              child: Icon(badgeIcon, color: Colors.white, size: size * 0.25),
+              child: Icon(
+                badgeIcon, 
+                color: Colors.white, 
+                size: widget.size * 0.25,
+                shadows: [
+                  Shadow(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    blurRadius: 2,
+                    offset: const Offset(1, 1),
+                  )
+                ],
+              ),
             ),
           ),
       ],

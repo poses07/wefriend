@@ -6,6 +6,8 @@ import 'quests_screen.dart'; // Görevler ve Rozetler sayfası için eklendi
 import '../providers.dart';
 import 'store_screen.dart';
 
+import '../widgets/premium_paywall_sheet.dart';
+
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
@@ -417,12 +419,17 @@ class ProfileScreen extends ConsumerWidget {
                             height: 24,
                             color: cs.onSurfaceVariant.withValues(alpha: 0.2),
                           ),
-                          _buildCompactStat(
-                            context,
-                            '$views',
-                            'Ziyaret',
-                            Icons.visibility,
-                            cs.primary,
+                          GestureDetector(
+                            onTap: () {
+                              _showVisitorsSheet(context, ref);
+                            },
+                            child: _buildCompactStat(
+                              context,
+                              '$views',
+                              'Ziyaret',
+                              Icons.visibility,
+                              cs.primary,
+                            ),
                           ),
                           Container(
                             width: 1,
@@ -618,6 +625,166 @@ class ProfileScreen extends ConsumerWidget {
           );
         },
       ),
+    );
+  }
+
+  void _showVisitorsSheet(BuildContext context, WidgetRef ref) async {
+    final cs = Theme.of(context).colorScheme;
+    final api = ref.read(apiServiceProvider);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.7,
+          decoration: BoxDecoration(
+            color: cs.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            children: [
+              Container(
+                margin: const EdgeInsets.symmetric(vertical: 12),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: cs.onSurfaceVariant.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Text(
+                  'Profilini Ziyaret Edenler',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+              ),
+              Expanded(
+                child: FutureBuilder<List<Map<String, dynamic>>>(
+                  future: api.getProfileVisitors(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+
+                    if (snapshot.hasError ||
+                        !snapshot.hasData ||
+                        snapshot.data!.isEmpty) {
+                      return const Center(child: Text('Henüz ziyaretçin yok.'));
+                    }
+
+                    final visitors = snapshot.data!;
+                    // Kendi rank_level'ımızı çekip VIP miyiz bakalım
+                    final myProfile = ref.read(userProfileProvider).value;
+                    final myRank = myProfile?['rank_level'] ?? 'none';
+                    final bool amIVip =
+                        myRank == 'popular' || myRank == 'legendary';
+
+                    return ListView.builder(
+                      itemCount: visitors.length,
+                      itemBuilder: (context, index) {
+                        final v = visitors[index];
+
+                        return ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: cs.surfaceContainerHighest,
+                            child:
+                                amIVip && v['avatar_url'] != null
+                                    ? ClipOval(
+                                      child: Image.network(
+                                        v['avatar_url'],
+                                        fit: BoxFit.cover,
+                                      ),
+                                    )
+                                    : const Icon(
+                                      Icons.person,
+                                      color: Colors.grey,
+                                    ),
+                          ),
+                          title: Text(
+                            amIVip
+                                ? (v['alias'] ?? 'Gizli Kullanıcı')
+                                : 'Gizemli Ziyaretçi',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color:
+                                  amIVip ? cs.onSurface : cs.onSurfaceVariant,
+                            ),
+                          ),
+                          subtitle: Text(v['viewed_at'] ?? ''),
+                          trailing:
+                              !amIVip ? const Icon(Icons.lock, size: 16) : null,
+                          onTap: () {
+                            if (!amIVip) {
+                              Navigator.pop(context);
+                              // Paywall'ı aç
+                              showModalBottomSheet(
+                                context: context,
+                                isScrollControlled: true,
+                                backgroundColor: Colors.transparent,
+                                builder:
+                                    (context) => const PremiumPaywallSheet(),
+                              );
+                            }
+                          },
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+              // Eğer VIP değilsek alt tarafa kocaman bir "Kilidi Aç" butonu koy
+              Consumer(
+                builder: (context, ref, child) {
+                  final myProfile = ref.watch(userProfileProvider).value;
+                  final myRank = myProfile?['rank_level'] ?? 'none';
+                  final bool amIVip =
+                      myRank == 'popular' || myRank == 'legendary';
+
+                  if (amIVip) return const SizedBox.shrink();
+
+                  return Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: cs.surface,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, -5),
+                        ),
+                      ],
+                    ),
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
+                          builder: (context) => const PremiumPaywallSheet(),
+                        );
+                      },
+                      icon: const Icon(Icons.workspace_premium),
+                      label: const Text('Ziyaretçileri Görmek İçin VIP Ol'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.amber.shade600,
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(double.infinity, 50),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 

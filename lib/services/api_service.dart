@@ -284,6 +284,64 @@ class ApiService {
     }
   }
 
+  // Profil Ziyaretçilerini Getir
+  Future<List<Map<String, dynamic>>> getProfileVisitors() async {
+    try {
+      final response = await _dio.get('/user/visitors');
+      if (response.statusCode == 200 && response.data['status'] == 'success') {
+        return List<Map<String, dynamic>>.from(response.data['data']);
+      }
+      return [];
+    } catch (e) {
+      debugPrint('getProfileVisitors hatası: $e');
+      return [];
+    }
+  }
+
+  // Kullanıcıyı Beğen veya Süper Beğen (Match sistemi)
+  Future<Map<String, dynamic>> likeUser(
+    int targetId, {
+    bool isSuperLike = false,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/user/like',
+        data: {'target_id': targetId, 'is_super_like': isSuperLike},
+      );
+
+      return {
+        'success': response.data['status'] == 'success',
+        'message': response.data['message'],
+        'is_match': response.data['data']?['is_match'] ?? false,
+        'is_super_like': response.data['data']?['is_super_like'] ?? false,
+      };
+    } on DioException catch (e) {
+      return {
+        'success': false,
+        'message': e.response?.data['message'] ?? 'Beğeni işlemi başarısız',
+      };
+    }
+  }
+
+  // Profili Öne Çıkar (Boost)
+  Future<Map<String, dynamic>> boostProfile({String package = '1_hour'}) async {
+    try {
+      final response = await _dio.post(
+        '/user/boost',
+        data: {'package': package},
+      );
+      return {
+        'success': response.data['status'] == 'success',
+        'message': response.data['message'],
+      };
+    } on DioException catch (e) {
+      return {
+        'success': false,
+        'message': e.response?.data['message'] ?? 'Boost işlemi başarısız',
+      };
+    }
+  }
+
   // Quests (Görevler) Getir
   Future<Map<String, dynamic>> getQuests() async {
     try {

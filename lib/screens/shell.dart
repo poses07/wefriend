@@ -144,6 +144,9 @@ class _ShellState extends ConsumerState<Shell> {
     IconData selectedIcon,
   ) {
     final isSelected = index == itemIndex;
+    
+    // Eğer bu sohbet ikonuysa (index 2), okunmamış mesaj var mı kontrol et
+    final hasUnreadMessages = itemIndex == 2 && _hasUnreadChats();
 
     return GestureDetector(
       onTap: () => setState(() => index = itemIndex),
@@ -162,15 +165,56 @@ class _ShellState extends ConsumerState<Shell> {
                   : Colors.transparent,
           borderRadius: BorderRadius.circular(30),
         ),
-        child: Icon(
-          isSelected ? selectedIcon : unselectedIcon,
-          color:
-              isSelected
-                  ? cs.primary
-                  : cs.onSurfaceVariant.withValues(alpha: 0.7),
-          size: 26,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Icon(
+              isSelected ? selectedIcon : unselectedIcon,
+              color:
+                  isSelected
+                      ? cs.primary
+                      : cs.onSurfaceVariant.withValues(alpha: 0.7),
+              size: 26,
+            ),
+            if (hasUnreadMessages)
+              Positioned(
+                top: -2,
+                right: -2,
+                child: Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: Colors.redAccent,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: isSelected ? cs.primary.withValues(alpha: 0.15) : cs.surface,
+                      width: 2,
+                    ),
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );
+  }
+
+  bool _hasUnreadChats() {
+    final chatsAsyncValue = ref.watch(chatsProvider);
+    bool hasUnread = false;
+    
+    chatsAsyncValue.whenData((chats) {
+      if (chats != null) {
+        for (var chat in chats) {
+          if ((chat['is_new'] == true || chat['is_new'] == 1) || 
+              (chat['unread_count'] != null && chat['unread_count'] > 0)) {
+            hasUnread = true;
+            break;
+          }
+        }
+      }
+    });
+    
+    return hasUnread;
   }
 }

@@ -218,7 +218,11 @@ class _UserDetailScreenState extends ConsumerState<UserDetailScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.person, size: 80, color: Colors.white.withValues(alpha: 0.5)),
+                        Icon(
+                          Icons.person,
+                          size: 80,
+                          color: Colors.white.withValues(alpha: 0.5),
+                        ),
                         const SizedBox(height: 16),
                         Text(
                           widget.user['alias'] ?? 'İsimsiz',
@@ -263,7 +267,9 @@ class _UserDetailScreenState extends ConsumerState<UserDetailScreen> {
               physics: const BouncingScrollPhysics(),
               slivers: [
                 SliverToBoxAdapter(
-                  child: SizedBox(height: size.height * 0.45), // Fotoğrafın görünmesi için boşluk
+                  child: SizedBox(
+                    height: size.height * 0.45,
+                  ), // Fotoğrafın görünmesi için boşluk
                 ),
                 SliverToBoxAdapter(
                   child: Padding(
@@ -288,7 +294,10 @@ class _UserDetailScreenState extends ConsumerState<UserDetailScreen> {
                             ),
                             if (widget.user['age'] != null)
                               Padding(
-                                padding: const EdgeInsets.only(left: 12.0, bottom: 4),
+                                padding: const EdgeInsets.only(
+                                  left: 12.0,
+                                  bottom: 4,
+                                ),
                                 child: Text(
                                   '${widget.user['age']}',
                                   style: const TextStyle(
@@ -309,19 +318,33 @@ class _UserDetailScreenState extends ConsumerState<UserDetailScreen> {
                               width: 10,
                               height: 10,
                               decoration: BoxDecoration(
-                                color: (widget.user['is_online'] == 1 || widget.user['is_online'] == true) 
-                                    ? Colors.greenAccent 
-                                    : Colors.grey,
+                                color:
+                                    (widget.user['is_online'] == 1 ||
+                                            widget.user['is_online'] == true ||
+                                            widget.user['is_online'] == '1')
+                                        ? Colors.greenAccent
+                                        : Colors.grey,
                                 shape: BoxShape.circle,
-                                boxShadow: (widget.user['is_online'] == 1 || widget.user['is_online'] == true) 
-                                  ? [BoxShadow(color: Colors.greenAccent.withValues(alpha: 0.5), blurRadius: 6)] 
-                                  : null,
+                                boxShadow:
+                                    (widget.user['is_online'] == 1 ||
+                                            widget.user['is_online'] == true ||
+                                            widget.user['is_online'] == '1')
+                                        ? [
+                                          BoxShadow(
+                                            color: Colors.greenAccent
+                                                .withValues(alpha: 0.5),
+                                            blurRadius: 6,
+                                          ),
+                                        ]
+                                        : null,
                               ),
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              (widget.user['is_online'] == 1 || widget.user['is_online'] == true) 
-                                  ? 'Şu an aktif' 
+                              (widget.user['is_online'] == 1 ||
+                                      widget.user['is_online'] == true ||
+                                      widget.user['is_online'] == '1')
+                                  ? 'Şu an aktif'
                                   : 'Çevrimdışı',
                               style: TextStyle(
                                 color: Colors.white.withValues(alpha: 0.9),
@@ -331,9 +354,16 @@ class _UserDetailScreenState extends ConsumerState<UserDetailScreen> {
                             ),
                             const Padding(
                               padding: EdgeInsets.symmetric(horizontal: 12.0),
-                              child: Text('•', style: TextStyle(color: Colors.white54)),
+                              child: Text(
+                                '•',
+                                style: TextStyle(color: Colors.white54),
+                              ),
                             ),
-                            Icon(Icons.location_on_rounded, size: 16, color: Colors.white.withValues(alpha: 0.7)),
+                            Icon(
+                              Icons.location_on_rounded,
+                              size: 16,
+                              color: Colors.white.withValues(alpha: 0.7),
+                            ),
                             const SizedBox(width: 4),
                             Text(
                               widget.user['city'] ?? 'Bilinmeyen Konum',
@@ -349,11 +379,17 @@ class _UserDetailScreenState extends ConsumerState<UserDetailScreen> {
                         // Rozet (Rank)
                         if (rankStr != 'none')
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 10,
+                            ),
                             decoration: BoxDecoration(
                               color: rankColor.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: rankColor.withValues(alpha: 0.3), width: 1.5),
+                              border: Border.all(
+                                color: rankColor.withValues(alpha: 0.3),
+                                width: 1.5,
+                              ),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
@@ -372,11 +408,12 @@ class _UserDetailScreenState extends ConsumerState<UserDetailScreen> {
                               ],
                             ),
                           ),
-                        
+
                         if (rankStr != 'none') const SizedBox(height: 24),
 
                         // Hakkında (Bio)
-                        if (widget.user['bio'] != null && widget.user['bio'].toString().isNotEmpty) ...[
+                        if (widget.user['bio'] != null &&
+                            widget.user['bio'].toString().isNotEmpty) ...[
                           const Text(
                             'Hakkında',
                             style: TextStyle(
@@ -398,7 +435,9 @@ class _UserDetailScreenState extends ConsumerState<UserDetailScreen> {
                         ],
 
                         // Fiziksel Özellikler (Chip'ler)
-                        if (widget.user['height'] != null || widget.user['weight'] != null || widget.user['zodiac_sign'] != null) ...[
+                        if (widget.user['height'] != null ||
+                            widget.user['weight'] != null ||
+                            widget.user['zodiac_sign'] != null) ...[
                           const Text(
                             'Temel Bilgiler',
                             style: TextStyle(
@@ -423,7 +462,9 @@ class _UserDetailScreenState extends ConsumerState<UserDetailScreen> {
                                   '${widget.user['weight']} kg',
                                 ),
                               if (widget.user['zodiac_sign'] != null &&
-                                  widget.user['zodiac_sign'].toString().isNotEmpty)
+                                  widget.user['zodiac_sign']
+                                      .toString()
+                                      .isNotEmpty)
                                 _buildGlassChip(
                                   Icons.auto_awesome,
                                   widget.user['zodiac_sign'],
@@ -448,13 +489,16 @@ class _UserDetailScreenState extends ConsumerState<UserDetailScreen> {
                           Wrap(
                             spacing: 10,
                             runSpacing: 10,
-                            children: (widget.user['interests'] as String)
-                                .split(',')
-                                .map((interest) => _buildGlassChip(
-                                      Icons.star_rounded,
-                                      interest.trim(),
-                                    ))
-                                .toList(),
+                            children:
+                                (widget.user['interests'] as String)
+                                    .split(',')
+                                    .map(
+                                      (interest) => _buildGlassChip(
+                                        Icons.star_rounded,
+                                        interest.trim(),
+                                      ),
+                                    )
+                                    .toList(),
                           ),
                         ],
 
@@ -494,7 +538,12 @@ class _UserDetailScreenState extends ConsumerState<UserDetailScreen> {
             left: 0,
             right: 0,
             child: Container(
-              padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(context).padding.bottom + 16),
+              padding: EdgeInsets.fromLTRB(
+                24,
+                24,
+                24,
+                MediaQuery.of(context).padding.bottom + 16,
+              ),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.bottomCenter,
@@ -542,7 +591,8 @@ class _UserDetailScreenState extends ConsumerState<UserDetailScreen> {
                               rankLevel: widget.user['rank_level'],
                               isOnline:
                                   widget.user['is_online'] == 1 ||
-                                  widget.user['is_online'] == true,
+                                  widget.user['is_online'] == true ||
+                                  widget.user['is_online'] == '1',
                             ),
                       ),
                     );

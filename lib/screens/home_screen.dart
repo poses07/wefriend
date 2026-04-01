@@ -953,8 +953,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                                                 user['rank_level']
                                                                     ?.toString(),
                                                             isOnline:
-                                                                user['is_online'] ==
-                                                                1,
+                                                                user['is_online'] == 1 ||
+                                                                user['is_online'] == true ||
+                                                                user['is_online'] == '1',
                                                           ),
                                                     ),
                                                   );

@@ -219,6 +219,24 @@ class ChatController {
             exit();
         }
 
+        try {
+            $this->db->exec("CREATE TABLE IF NOT EXISTS chats (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user1_id INT NOT NULL,
+                user2_id INT NOT NULL,
+                anonymous_name VARCHAR(100),
+                last_message TEXT,
+                last_message_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                is_deleted_by_u1 TINYINT(1) DEFAULT 0,
+                is_deleted_by_u2 TINYINT(1) DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_u1 (user1_id),
+                INDEX idx_u2 (user2_id)
+            )");
+        } catch (Exception $e) {
+            // Sessizce devam et
+        }
+
         // Zaten aralarında bu yönde (Biz -> Karşı Taraf) bir sohbet var mı kontrol et
         // Connected2.me mantığı: A kişisi B'ye yazarsa A anonimdir. 
         // B kişisi A'ya yazarsa B anonimdir. Bunlar 2 ayrı sohbettir!
@@ -276,6 +294,20 @@ class ChatController {
             Response::json(403, "Bu sohbete mesaj gönderemezsiniz.");
             exit();
         }
+
+        try {
+            $this->db->exec("CREATE TABLE IF NOT EXISTS messages (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                chat_id INT NOT NULL,
+                sender_id INT NOT NULL,
+                content TEXT NOT NULL,
+                message_type VARCHAR(20) DEFAULT 'text',
+                is_read TINYINT(1) DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_chat (chat_id),
+                INDEX idx_sender (sender_id)
+            )");
+        } catch (Exception $e) {}
 
         // Mesajı veritabanına kaydet
         $insert = $this->db->prepare("INSERT INTO messages (chat_id, sender_id, content, message_type) VALUES (:chat_id, :sender_id, :content, :type)");

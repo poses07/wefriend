@@ -33,9 +33,65 @@ class QuestController {
     public function getQuests() {
         $user_id = $this->authenticate();
 
+        try {
+            $this->db->exec("CREATE TABLE IF NOT EXISTS quests (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                title VARCHAR(255) NOT NULL,
+                description TEXT NOT NULL,
+                target_count INT NOT NULL,
+                reward_xp INT NOT NULL,
+                reward_coins INT DEFAULT 0,
+                quest_type ENUM('daily', 'weekly', 'monthly') NOT NULL,
+                action_type VARCHAR(100) NOT NULL,
+                icon_name VARCHAR(100) DEFAULT 'star',
+                color_hex VARCHAR(7) DEFAULT '#FFD700',
+                is_active TINYINT(1) DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )");
+            $this->db->exec("CREATE TABLE IF NOT EXISTS user_quests (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                quest_id INT NOT NULL,
+                progress INT DEFAULT 0,
+                is_completed TINYINT(1) DEFAULT 0,
+                is_claimed TINYINT(1) DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY unique_user_quest (user_id, quest_id)
+            )");
+        } catch (Exception $e) {}
+
         $response = ['daily' => [], 'weekly' => [], 'monthly' => []];
 
         try {
+            // Sütunların var olduğundan emin ol (kendi kendini onaran yapı)
+            try {
+                $this->db->exec("ALTER TABLE quests ADD COLUMN is_active TINYINT(1) DEFAULT 1");
+            } catch (Exception $e) {}
+            
+            try {
+                $this->db->exec("ALTER TABLE quests ADD COLUMN action_type VARCHAR(100) DEFAULT 'general'");
+            } catch (Exception $e) {}
+
+            try {
+                $this->db->exec("ALTER TABLE quests ADD COLUMN reward_coins INT DEFAULT 0");
+            } catch (Exception $e) {}
+
+            try {
+                $this->db->exec("ALTER TABLE quests ADD COLUMN icon_name VARCHAR(100) DEFAULT 'star_rounded'");
+            } catch (Exception $e) {}
+
+            try {
+                $this->db->exec("ALTER TABLE quests ADD COLUMN color_hex VARCHAR(7) DEFAULT '#FFD700'");
+            } catch (Exception $e) {}
+
+            try {
+                $this->db->exec("ALTER TABLE user_quests ADD COLUMN is_claimed TINYINT(1) DEFAULT 0");
+            } catch (Exception $e) {}
+
+            try {
+                $this->db->exec("ALTER TABLE user_quests ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP");
+            } catch (Exception $e) {}
+
             // Aktif görevleri getir
             $stmt = $this->db->query("SELECT * FROM quests WHERE is_active = 1");
             $quests = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -77,7 +133,8 @@ class QuestController {
                 $response[$q['quest_type']][] = $questData;
             }
         } catch (Exception $e) {
-            // Tablo yoksa veya hata oluşursa boş response dön
+            // Hata olursa response'a hatayı ekleyelim (debug için)
+            $response['debug_error'] = $e->getMessage();
         }
 
         Response::json(200, "Görevler getirildi.", $response);

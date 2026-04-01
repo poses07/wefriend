@@ -20,18 +20,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
     $xp = (int)($_POST['reward_xp'] ?? 0);
     $target = (int)($_POST['target_count'] ?? 1);
     $type = $_POST['quest_type'] ?? 'daily';
+    $action_type = $_POST['action_type'] ?? 'general';
     $icon = $_POST['icon_name'] ?? 'star_rounded';
     $color = $_POST['color_hex'] ?? '#FF9800';
 
     if ($title && $desc) {
         try {
-            $stmt = $db->prepare("INSERT INTO quests (title, description, reward_xp, target_count, quest_type, icon_name, color_hex) VALUES (:title, :desc, :xp, :target, :type, :icon, :color)");
+            $stmt = $db->prepare("INSERT INTO quests (title, description, reward_xp, target_count, quest_type, action_type, icon_name, color_hex) VALUES (:title, :desc, :xp, :target, :type, :action_type, :icon, :color)");
             $stmt->execute([
                 ':title' => $title,
                 ':desc' => $desc,
                 ':xp' => $xp,
                 ':target' => $target,
                 ':type' => $type,
+                ':action_type' => $action_type,
                 ':icon' => $icon,
                 ':color' => $color
             ]);
@@ -133,6 +135,19 @@ require_once 'includes/sidebar.php';
                         <option value="daily">Günlük</option>
                         <option value="weekly">Haftalık</option>
                         <option value="monthly">Aylık</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Eylem Tipi (Tetikleyici)</label>
+                    <select name="action_type" class="form-select" required>
+                        <option value="chat">Sohbet Etme (Mesaj Gönderme)</option>
+                        <option value="profile_view">Profil Ziyareti</option>
+                        <option value="like">Beğeni Gönderme</option>
+                        <option value="super_like">Süper Beğeni Gönderme</option>
+                        <option value="story_post">Hikaye Paylaşma</option>
+                        <option value="login">Günlük Giriş</option>
+                        <option value="general">Genel / Diğer</option>
                     </select>
                 </div>
 

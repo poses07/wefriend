@@ -51,6 +51,19 @@ class NotificationController {
     public function getNotifications() {
         $user_id = $this->authenticate();
 
+        try {
+            $this->db->exec("CREATE TABLE IF NOT EXISTS notifications (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                title VARCHAR(255) NOT NULL,
+                message TEXT NOT NULL,
+                type VARCHAR(50) DEFAULT 'info',
+                is_read TINYINT(1) DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_user (user_id)
+            )");
+        } catch (Exception $e) {}
+
         $query = "SELECT id, title, message, type, is_read, created_at FROM notifications WHERE user_id = :user_id ORDER BY created_at DESC LIMIT 50";
         $stmt = $this->db->prepare($query);
         $stmt->execute([':user_id' => $user_id]);

@@ -96,6 +96,24 @@ class UserController {
                     ON DUPLICATE KEY UPDATE viewed_at = NOW()
                 ");
                 $viewStmt->execute([':viewer' => $user_id, ':viewed' => $target_id]);
+
+                // Sadece yeni ziyaretlerde (veya veritabanı update tetiklendiğinde) bildirim atalım
+                if ($viewStmt->rowCount() > 0) {
+                    // Kimin baktığını bul
+                    $viewerStmt = $this->db->prepare("SELECT alias FROM users WHERE id = :id LIMIT 1");
+                    $viewerStmt->execute([':id' => $user_id]);
+                    $viewerName = $viewerStmt->fetchColumn() ?: 'Gizemli Biri';
+
+                    require_once __DIR__ . '/../utils/FcmHelper.php';
+                    FcmHelper::sendToUser(
+                        $this->db, 
+                        $target_id, 
+                        "👀 Yeni Profil Ziyareti!", 
+                        "$viewerName profiline göz attı. Hemen kim olduğuna bak!",
+                        ['type' => 'profile_view', 'viewer_id' => $user_id]
+                    );
+                }
+
             } catch (Exception $e) {
                 // Log the error silently
             }
@@ -153,21 +171,29 @@ class UserController {
         $user['badges'] = $badges;
 
         // Şimdilik varsayılan istatistikler ekleyelim
-        // Eğer kendi profiliysek gerçek ziyaretçi sayısını göster
+        // Gerçek ziyaretçi sayısını çek
         $viewsCount = 0;
-        if ($target_id === $user_id) {
-            try {
-                $viewsStmt = $this->db->prepare("SELECT COUNT(*) FROM profile_views WHERE viewed_id = :id");
-                $viewsStmt->execute([':id' => $user_id]);
-                $viewsCount = (int)$viewsStmt->fetchColumn();
-            } catch (Exception $e) {
-                $viewsCount = 0;
-            }
+        try {
+            $viewsStmt = $this->db->prepare("SELECT COUNT(*) FROM profile_views WHERE viewed_id = :id");
+            $viewsStmt->execute([':id' => $target_id]);
+            $viewsCount = (int)$viewsStmt->fetchColumn();
+        } catch (Exception $e) {
+            $viewsCount = 0;
+        }
+
+        // Gerçek beğeni sayısını çek
+        $likesCount = 0;
+        try {
+            $likesStmt = $this->db->prepare("SELECT COUNT(*) FROM user_likes WHERE liked_id = :id");
+            $likesStmt->execute([':id' => $target_id]);
+            $likesCount = (int)$likesStmt->fetchColumn();
+        } catch (Exception $e) {
+            $likesCount = 0;
         }
 
         $user['stats'] = [
             'views' => $viewsCount,
-            'likes' => 0
+            'likes' => $likesCount
         ];
 
         Response::json(200, "Profil başarıyla getirildi.", $user);
@@ -356,6 +382,14 @@ class UserController {
         }
 
         try {
+            $this->db->exec("CREATE TABLE IF NOT EXISTS user_blocks (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                blocker_id INT NOT NULL,
+                blocked_id INT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY unique_block (blocker_id, blocked_id)
+            )");
+
             $stmt = $this->db->prepare("INSERT IGNORE INTO user_blocks (blocker_id, blocked_id) VALUES (:blocker, :blocked)");
             $stmt->execute([':blocker' => $user_id, ':blocked' => $blocked_id]);
             Response::json(200, "Kullanıcı engellendi.");
@@ -374,6 +408,15 @@ class UserController {
         }
 
         try {
+            $this->db->exec("CREATE TABLE IF NOT EXISTS user_reports (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                reporter_id INT NOT NULL,
+                reported_id INT NOT NULL,
+                reason VARCHAR(255) NOT NULL,
+                details TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )");
+
             $stmt = $this->db->prepare("INSERT INTO user_reports (reporter_id, reported_id, reason, details) VALUES (:reporter, :reported, :reason, :details)");
             $stmt->execute([
                 ':reporter' => $user_id,
@@ -515,59 +558,52 @@ class UserController {
         $data = json_decode(file_get_contents("php://input"), true);
 
         // Paket seçimine göre jeton ve süre ayarla
-        $package = isset($data['package']) ? $data['package'] : '1_hour';
-        
-        $cost = 0;
-        $duration = '';
+        $duration = isset($data['duration']) ? (int)$data['duration'] : 30; // Varsayılan 30 dk
+        $cost = 50; // 30 dk = 50 jeton
 
-        if ($package == '1_hour') {
-            $cost = 100;
-            $duration = '+1 hour';
-        } else if ($package == '24_hours') {
-            $cost = 1500;
-            $duration = '+24 hours';
-        } else {
-            Response::json(400, "Geçersiz paket seçimi.");
-            exit;
-        }
+        if ($duration == 60) $cost = 90;
+        if ($duration == 120) $cost = 150;
 
         try {
             $this->db->beginTransaction();
 
-            // Kullanıcının yeterli jetonu var mı kontrol et
             $stmt = $this->db->prepare("SELECT coins FROM users WHERE id = :id FOR UPDATE");
             $stmt->execute([':id' => $user_id]);
-            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+            $coins = (int)$stmt->fetchColumn();
 
-            if (!$user || $user['coins'] < $cost) {
+            if ($coins < $cost) {
                 $this->db->rollBack();
-                Response::json(400, "Yetersiz jeton.");
-                exit;
+                Response::json(400, "Yetersiz jeton. Gerekli: $cost");
+                return;
             }
 
             // Jetonu düş
-            $this->db->prepare("UPDATE users SET coins = coins - :cost WHERE id = :id")->execute([
-                ':cost' => $cost,
-                ':id' => $user_id
-            ]);
+            $updateStmt = $this->db->prepare("UPDATE users SET coins = coins - :cost WHERE id = :id");
+            $updateStmt->execute([':cost' => $cost, ':id' => $user_id]);
 
-            // Boost ekle veya süresini uzat
-            $expires_at = date('Y-m-d H:i:s', strtotime($duration));
-            $this->db->prepare("
+            // Boost Tablosunu oluştur
+            $this->db->exec("CREATE TABLE IF NOT EXISTS profile_boosts (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                expires_at TIMESTAMP NOT NULL,
+                UNIQUE KEY unique_user (user_id),
+                INDEX idx_expires (expires_at)
+            )");
+
+            // Boost ekle veya güncelle
+            $boostStmt = $this->db->prepare("
                 INSERT INTO profile_boosts (user_id, expires_at) 
-                VALUES (:user_id, :expires_at)
-                ON DUPLICATE KEY UPDATE expires_at = :expires_at_update
-            ")->execute([
-                ':user_id' => $user_id,
-                ':expires_at' => $expires_at,
-                ':expires_at_update' => $expires_at
-            ]);
+                VALUES (:id, DATE_ADD(NOW(), INTERVAL :duration MINUTE))
+                ON DUPLICATE KEY UPDATE expires_at = DATE_ADD(GREATEST(expires_at, NOW()), INTERVAL :duration MINUTE)
+            ");
+            $boostStmt->execute([':id' => $user_id, ':duration' => $duration]);
 
             $this->db->commit();
-            Response::json(200, "Profiliniz başarıyla öne çıkarıldı!");
+            Response::json(200, "Profilin $duration dakika öne çıkarıldı!", ['remaining_coins' => $coins - $cost]);
         } catch (Exception $e) {
             $this->db->rollBack();
-            Response::json(500, "Hata oluştu.");
+            Response::json(500, "Hata oluştu: " . $e->getMessage());
         }
     }
 
@@ -591,6 +627,24 @@ class UserController {
         try {
             $this->db->beginTransaction();
 
+            // Tabloyu oluştur (eğer yoksa)
+            $this->db->exec("CREATE TABLE IF NOT EXISTS user_likes (
+                id INT AUTO_INCREMENT PRIMARY KEY, 
+                liker_id INT, 
+                liked_id INT, 
+                is_super_like BOOLEAN DEFAULT FALSE, 
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
+                UNIQUE KEY(liker_id, liked_id)
+            )");
+
+            $this->db->exec("CREATE TABLE IF NOT EXISTS matches (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user1_id INT NOT NULL,
+                user2_id INT NOT NULL,
+                matched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY unique_match (user1_id, user2_id)
+            )");
+
             // Eğer süper beğeni ise 50 jeton kes
             if ($is_super_like) {
                 $stmt = $this->db->prepare("SELECT coins FROM users WHERE id = :id FOR UPDATE");
@@ -609,16 +663,6 @@ class UserController {
                 require_once __DIR__ . '/../utils/FcmHelper.php';
                 FcmHelper::sendToUser($this->db, $target_id, "Süper Beğeni! 🌟", "Biri sana Süper Beğeni gönderdi! Kim olduğunu öğrenmek için tıkla.");
             }
-
-            // Tabloyu oluştur (eğer yoksa)
-            $this->db->exec("CREATE TABLE IF NOT EXISTS user_likes (
-                id INT AUTO_INCREMENT PRIMARY KEY, 
-                liker_id INT, 
-                liked_id INT, 
-                is_super_like BOOLEAN DEFAULT FALSE, 
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
-                UNIQUE KEY(liker_id, liked_id)
-            )");
 
             $stmt = $this->db->prepare("
                 INSERT INTO user_likes (liker_id, liked_id, is_super_like) 
@@ -639,6 +683,12 @@ class UserController {
             $is_match = false;
             if ($matchCheck->rowCount() > 0) {
                 $is_match = true;
+                
+                $u1 = min($user_id, $target_id);
+                $u2 = max($user_id, $target_id);
+                $matchStmt = $this->db->prepare("INSERT IGNORE INTO matches (user1_id, user2_id) VALUES (:u1, :u2)");
+                $matchStmt->execute([':u1' => $u1, ':u2' => $u2]);
+
                 // İki tarafa da bildirim atılabilir
                 require_once __DIR__ . '/../utils/FcmHelper.php';
                 FcmHelper::sendToUser($this->db, $target_id, "Yeni Eşleşme! 💖", "Biriyle eşleştin! Hemen sohbete başla.");

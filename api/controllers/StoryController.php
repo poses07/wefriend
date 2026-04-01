@@ -52,6 +52,29 @@ class StoryController {
     public function getStories() {
         $user_id = $this->authenticate();
 
+        try {
+            $this->db->exec("CREATE TABLE IF NOT EXISTS stories (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                media_url VARCHAR(255) NOT NULL,
+                views_count INT DEFAULT 0,
+                expires_at TIMESTAMP NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_user_id (user_id),
+                INDEX idx_expires_at (expires_at)
+            )");
+            $this->db->exec("CREATE TABLE IF NOT EXISTS story_views (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                story_id INT NOT NULL,
+                viewer_id INT NOT NULL,
+                viewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY unique_view (story_id, viewer_id),
+                INDEX idx_story_id (story_id)
+            )");
+        } catch (Exception $e) {
+            // Sessizce devam et
+        }
+
         // Önce süresi dolmuş hikayeleri veritabanından ve sunucudan temizleyelim (Cron yerine istek bazlı otomatik temizlik)
         $this->cleanupExpiredStories();
 

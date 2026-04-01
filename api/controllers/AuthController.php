@@ -18,6 +18,33 @@ class AuthController {
             Response::json(400, "Eksik bilgi. Lütfen takma ad, telefon, şifre ve cihaz kimliğini gönderin.");
         }
 
+        try {
+            $this->db->exec("CREATE TABLE IF NOT EXISTS users (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                uuid VARCHAR(100) NOT NULL,
+                alias VARCHAR(100) NOT NULL UNIQUE,
+                phone VARCHAR(50) NOT NULL UNIQUE,
+                password_hash VARCHAR(255) NOT NULL,
+                avatar_url VARCHAR(255),
+                bio TEXT,
+                age INT,
+                gender ENUM('Male', 'Female', 'Other'),
+                city VARCHAR(100),
+                rank_level VARCHAR(50) DEFAULT 'none',
+                xp_points INT DEFAULT 0,
+                coins INT DEFAULT 0,
+                interests TEXT,
+                height INT,
+                weight INT,
+                zodiac_sign VARCHAR(50),
+                refresh_token TEXT,
+                is_admin TINYINT(1) DEFAULT 0,
+                is_banned TINYINT(1) DEFAULT 0,
+                last_active TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )");
+        } catch (Exception $e) {}
+
         $alias = htmlspecialchars(strip_tags($data->alias));
         $phone = htmlspecialchars(strip_tags($data->phone));
         $uuid = htmlspecialchars(strip_tags($data->uuid));

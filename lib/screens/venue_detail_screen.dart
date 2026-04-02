@@ -35,17 +35,23 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
         slivers: [
           // Mekan Kapak Fotoğrafı ve Başlık
           SliverAppBar(
-            expandedHeight: 250.0,
+            expandedHeight: 280.0, // Daha geniş kapak alanı
             floating: false,
             pinned: true,
             backgroundColor: cs.surface,
             flexibleSpace: FlexibleSpaceBar(
+              titlePadding: const EdgeInsets.only(
+                left: 16,
+                bottom: 16,
+                right: 16,
+              ),
               title: Text(
                 widget.venue['name'] as String,
                 style: const TextStyle(
                   color: Colors.white,
+                  fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  shadows: [Shadow(color: Colors.black, blurRadius: 10)],
+                  shadows: [Shadow(color: Colors.black87, blurRadius: 15)],
                 ),
               ),
               background: Stack(
@@ -60,10 +66,15 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
                           return Image.network(
                             snapshot.data!.first,
                             fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => Container(color: cs.primary),
+                            errorBuilder:
+                                (context, error, stackTrace) =>
+                                    Container(color: cs.primary),
                           );
                         }
-                        return Container(color: (widget.venue['color'] as Color?) ?? cs.primary);
+                        return Container(
+                          color:
+                              (widget.venue['color'] as Color?) ?? cs.primary,
+                        );
                       },
                     )
                   else
@@ -161,6 +172,7 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
                   Container(
                     width: double.infinity,
                     height: 56,
+                    margin: const EdgeInsets.only(top: 8),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(20),
                       gradient: LinearGradient(

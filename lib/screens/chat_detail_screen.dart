@@ -210,7 +210,6 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
     _startPolling();
   }
 
-
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
@@ -518,6 +517,138 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
     );
   }
 
+  void _showIcebreakerBottomSheet() {
+    final cs = Theme.of(context).colorScheme;
+
+    // 2026 tarzı eğlenceli ve modern buz kırıcı listesi
+    final List<String> icebreakers = [
+      "Eğer hayatının bir tema müziği olsaydı, şu an arka planda hangi şarkı çalardı? 🎵",
+      "Bugün karşılaştığın en garip şey neydi? Benimle paylaşır mısın? 🤔",
+      "Sadece bir emoji kullanarak şu anki ruh halini özetle! 👀",
+      "Zamanda yolculuk yapabilseydin, hangi yıla ve nereye giderdin? ⏳",
+      "Bir zombi istilası başlasa, yanına alacağın ilk 3 şey ne olurdu? 🧟‍♂️",
+      "Pizza mı hamburger mi? (Bu cevap dostluğumuzu belirleyecek 🍕🍔)",
+      "Şu an dünyadaki herhangi bir yerde olabilseydin, nerede uyanmak isterdin? 🌍",
+      "Kahve mi çay mı? Tarafını seç! ☕",
+      "Görünmezlik mi, yoksa uçabilmek mi? Hangi süper gücü seçerdin? 🦸‍♂️",
+      "Bana kimsenin bilmediği, sadece senin bildiğin bir sırrını (ya da ilginç bir bilgiyi) söyle! 🤫",
+    ];
+
+    // Rastgele 3 tane seç
+    icebreakers.shuffle();
+    final selectedIcebreakers = icebreakers.take(3).toList();
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: cs.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+            boxShadow: [
+              BoxShadow(
+                color: cs.primary.withValues(alpha: 0.15),
+                blurRadius: 20,
+                spreadRadius: 5,
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: cs.primary.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.auto_awesome,
+                      color: cs.primary,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'AI Buz Kırıcı 🤖',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          'Sohbeti başlatmak için birini seç!',
+                          style: TextStyle(fontSize: 14, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              ...selectedIcebreakers.map(
+                (msg) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12.0),
+                  child: InkWell(
+                    onTap: () {
+                      setState(() {
+                        _messageController.text = msg;
+                      });
+                      Navigator.pop(context);
+                    },
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: cs.primary.withValues(alpha: 0.2),
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        color: cs.surfaceContainerHighest.withValues(
+                          alpha: 0.3,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              msg,
+                              style: TextStyle(
+                                fontSize: 15,
+                                color: cs.onSurface,
+                                height: 1.4,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            size: 16,
+                            color: cs.primary,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   void dispose() {
     _pollingTimer?.cancel();
@@ -600,8 +731,11 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                       itemBuilder: (context, index) {
                         final message = _messages[index];
                         final isMe = message['isMe'] as bool;
-                        final String senderRank = message['rank_level']?.toString() ?? 'none';
-                        final bool isSenderVip = senderRank == 'popular' || senderRank == 'legendary';
+                        final String senderRank =
+                            message['rank_level']?.toString() ?? 'none';
+                        final bool isSenderVip =
+                            senderRank == 'popular' ||
+                            senderRank == 'legendary';
 
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 16.0),
@@ -711,15 +845,43 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                                                     begin: Alignment.topLeft,
                                                     end: Alignment.bottomRight,
                                                   )
-                                                  : isSenderVip 
-                                                    ? LinearGradient(
-                                                        colors: senderRank == 'legendary' 
-                                                          ? [Colors.purple.shade900.withValues(alpha: 0.8), Colors.deepPurple.shade900.withValues(alpha: 0.8)]
-                                                          : [Colors.orange.shade900.withValues(alpha: 0.8), Colors.deepOrange.shade900.withValues(alpha: 0.8)],
-                                                        begin: Alignment.topLeft,
-                                                        end: Alignment.bottomRight,
-                                                      )
-                                                    : null,
+                                                  : isSenderVip
+                                                  ? LinearGradient(
+                                                    colors:
+                                                        senderRank ==
+                                                                'legendary'
+                                                            ? [
+                                                              Colors
+                                                                  .purple
+                                                                  .shade900
+                                                                  .withValues(
+                                                                    alpha: 0.8,
+                                                                  ),
+                                                              Colors
+                                                                  .deepPurple
+                                                                  .shade900
+                                                                  .withValues(
+                                                                    alpha: 0.8,
+                                                                  ),
+                                                            ]
+                                                            : [
+                                                              Colors
+                                                                  .orange
+                                                                  .shade900
+                                                                  .withValues(
+                                                                    alpha: 0.8,
+                                                                  ),
+                                                              Colors
+                                                                  .deepOrange
+                                                                  .shade900
+                                                                  .withValues(
+                                                                    alpha: 0.8,
+                                                                  ),
+                                                            ],
+                                                    begin: Alignment.topLeft,
+                                                    end: Alignment.bottomRight,
+                                                  )
+                                                  : null,
                                           color:
                                               isMe || isSenderVip
                                                   ? null
@@ -731,19 +893,38 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                                                     ? Colors.white.withValues(
                                                       alpha: 0.2,
                                                     )
-                                                    : isSenderVip 
-                                                      ? (senderRank == 'legendary' ? Colors.purpleAccent.withValues(alpha: 0.5) : Colors.orangeAccent.withValues(alpha: 0.5))
-                                                      : cs.outlineVariant
+                                                    : isSenderVip
+                                                    ? (senderRank == 'legendary'
+                                                        ? Colors.purpleAccent
+                                                            .withValues(
+                                                              alpha: 0.5,
+                                                            )
+                                                        : Colors.orangeAccent
+                                                            .withValues(
+                                                              alpha: 0.5,
+                                                            ))
+                                                    : cs.outlineVariant
                                                         .withValues(alpha: 0.3),
                                             width: isSenderVip ? 1.5 : 1,
                                           ),
-                                          boxShadow: isSenderVip && !isMe ? [
-                                            BoxShadow(
-                                              color: (senderRank == 'legendary' ? Colors.purpleAccent : Colors.orangeAccent).withValues(alpha: 0.2),
-                                              blurRadius: 10,
-                                              spreadRadius: 1,
-                                            )
-                                          ] : [],
+                                          boxShadow:
+                                              isSenderVip && !isMe
+                                                  ? [
+                                                    BoxShadow(
+                                                      color: (senderRank ==
+                                                                  'legendary'
+                                                              ? Colors
+                                                                  .purpleAccent
+                                                              : Colors
+                                                                  .orangeAccent)
+                                                          .withValues(
+                                                            alpha: 0.2,
+                                                          ),
+                                                      blurRadius: 10,
+                                                      spreadRadius: 1,
+                                                    ),
+                                                  ]
+                                                  : [],
                                         ),
                                         child: Column(
                                           crossAxisAlignment:
@@ -976,9 +1157,10 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                             vertical: 14,
                           ),
                           suffixIcon: IconButton(
-                            icon: const Icon(Icons.sentiment_satisfied_alt),
-                            color: cs.onSurfaceVariant,
-                            onPressed: () {},
+                            icon: const Icon(Icons.auto_awesome),
+                            color: cs.primary,
+                            tooltip: 'AI Buz Kırıcı',
+                            onPressed: _showIcebreakerBottomSheet,
                           ),
                         ),
                       ),

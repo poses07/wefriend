@@ -145,21 +145,23 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
       floatingActionButton:
           isVenuesTabActive
               ? Padding(
-                  padding: const EdgeInsets.only(bottom: 80.0), // Alt menü (BottomNavigationBar) çubuğunun üstünde kalması için
-                  child: FloatingActionButton.extended(
-                    onPressed: () => _showCheckInBottomSheet(context),
-                    icon: const Icon(Icons.pin_drop_rounded, color: Colors.white),
-                    label: const Text(
-                      'Check-in Yap',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
+                padding: const EdgeInsets.only(
+                  bottom: 80.0,
+                ), // Alt menü (BottomNavigationBar) çubuğunun üstünde kalması için
+                child: FloatingActionButton.extended(
+                  onPressed: () => _showCheckInBottomSheet(context),
+                  icon: const Icon(Icons.pin_drop_rounded, color: Colors.white),
+                  label: const Text(
+                    'Check-in Yap',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
                     ),
-                    backgroundColor: cs.primary,
-                    elevation: 4,
                   ),
-                )
+                  backgroundColor: cs.primary,
+                  elevation: 4,
+                ),
+              )
               : null, // Kullanıcılar sekmesinde FAB gösterilmez
       body: SafeArea(
         child: Padding(
@@ -445,7 +447,14 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
                                     if (!context.mounted) return;
 
                                     if (result['success'] == true) {
-                                      final int newChatId = result['chat_id'];
+                                      final int newChatId =
+                                          int.tryParse(
+                                            result['data']?['chat_id']
+                                                    ?.toString() ??
+                                                '0',
+                                          ) ??
+                                          result['chat_id'] ??
+                                          0;
 
                                       // 2. Alınan gerçek chat_id ile ChatDetailScreen'e gidelim
                                       Navigator.of(context).push(
@@ -453,7 +462,12 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
                                           builder:
                                               (context) => ChatDetailScreen(
                                                 chatId: newChatId,
-                                                otherUserId: user['id'],
+                                                otherUserId:
+                                                    int.tryParse(
+                                                      user['id']?.toString() ??
+                                                          '0',
+                                                    ) ??
+                                                    0,
                                                 userName:
                                                     user['alias'] ?? 'Anonim',
                                                 avatarUrl: avatarUrl ?? '',
@@ -500,7 +514,11 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
                                           theirName: user['alias'] ?? 'İsimsiz',
                                           onSendMessage: () async {
                                             final chatRes = await api.startChat(
-                                              user['id'],
+                                              int.tryParse(
+                                                    user['id']?.toString() ??
+                                                        '0',
+                                                  ) ??
+                                                  0,
                                             );
                                             if (context.mounted &&
                                                 chatRes['success'] == true) {
@@ -511,8 +529,20 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
                                                         context,
                                                       ) => ChatDetailScreen(
                                                         chatId:
-                                                            chatRes['chat_id'],
-                                                        otherUserId: user['id'],
+                                                            int.tryParse(
+                                                              chatRes['data']?['chat_id']
+                                                                      ?.toString() ??
+                                                                  '0',
+                                                            ) ??
+                                                            chatRes['chat_id'] ??
+                                                            0,
+                                                        otherUserId:
+                                                            int.tryParse(
+                                                              user['id']
+                                                                      ?.toString() ??
+                                                                  '0',
+                                                            ) ??
+                                                            0,
                                                         userName:
                                                             user['alias'] ??
                                                             'Anonim',
@@ -604,7 +634,14 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
                                                 user['alias'] ?? 'İsimsiz',
                                             onSendMessage: () async {
                                               final chatRes = await api
-                                                  .startChat(user['id']);
+                                                  .startChat(
+                                                    int.tryParse(
+                                                          user['id']
+                                                                  ?.toString() ??
+                                                              '0',
+                                                        ) ??
+                                                        0,
+                                                  );
                                               if (context.mounted &&
                                                   chatRes['success'] == true) {
                                                 Navigator.of(context).push(
@@ -614,9 +651,20 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
                                                           context,
                                                         ) => ChatDetailScreen(
                                                           chatId:
-                                                              chatRes['chat_id'],
+                                                              int.tryParse(
+                                                                chatRes['data']?['chat_id']
+                                                                        ?.toString() ??
+                                                                    '0',
+                                                              ) ??
+                                                              chatRes['chat_id'] ??
+                                                              0,
                                                           otherUserId:
-                                                              user['id'],
+                                                              int.tryParse(
+                                                                user['id']
+                                                                        ?.toString() ??
+                                                                    '0',
+                                                              ) ??
+                                                              0,
                                                           userName:
                                                               user['alias'] ??
                                                               'Anonim',

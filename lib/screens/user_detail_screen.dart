@@ -181,7 +181,6 @@ class _UserDetailScreenState extends ConsumerState<UserDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     final size = MediaQuery.of(context).size;
     final primaryImageUrl =
         _images.isNotEmpty
@@ -190,24 +189,6 @@ class _UserDetailScreenState extends ConsumerState<UserDetailScreen> {
 
     // Premium/Rank kontrolü
     final rankStr = widget.user['rank_level'] ?? 'none';
-
-    UserRank userRank = UserRank.none;
-    if (rankStr == 'legendary') userRank = UserRank.legendary;
-    if (rankStr == 'popular') userRank = UserRank.popular;
-
-    Color rankColor = Colors.grey.shade400;
-    String rankLabel = 'Standart Üye';
-    IconData rankIcon = Icons.person;
-
-    if (rankStr == 'legendary') {
-      rankColor = Colors.purple.shade400;
-      rankLabel = 'Efsanevi Üye';
-      rankIcon = Icons.auto_awesome;
-    } else if (rankStr == 'popular') {
-      rankColor = Colors.orange.shade500;
-      rankLabel = 'Popüler Üye';
-      rankIcon = Icons.local_fire_department_rounded;
-    }
 
     return Scaffold(
       backgroundColor: Colors.black, // Arka plan tamamen siyah

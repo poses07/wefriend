@@ -5,7 +5,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/services.dart';
 import '../providers.dart';
 import '../utils/custom_snackbar.dart';
-import '../widgets/premium_avatar.dart';
 import '../widgets/match_overlay.dart';
 import '../widgets/heart_explosion_overlay.dart';
 import 'chat_detail_screen.dart';
@@ -186,9 +185,6 @@ class _UserDetailScreenState extends ConsumerState<UserDetailScreen> {
         _images.isNotEmpty
             ? _images.first
             : 'https://ui-avatars.com/api/?name=${widget.user['alias'] ?? 'User'}&size=512&background=random&color=fff&bold=true';
-
-    // Premium/Rank kontrolü
-    final rankStr = widget.user['rank_level'] ?? 'none';
 
     return Scaffold(
       backgroundColor: Colors.black, // Arka plan tamamen siyah

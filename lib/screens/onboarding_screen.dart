@@ -219,38 +219,25 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   void _nextPage() {
-    // 1. Sayfa (Cinsiyet) Validasyonu
-    if (_currentPage == 0 && _selectedGender == null) {
-      CustomSnackBar.show(
-        context: context,
-        message: 'Lütfen cinsiyetinizi seçin.',
-        type: NotificationType.error,
-      );
-      return;
-    }
-
-    // 2. Sayfa (Yaş ve Şehir) Validasyonu
-    if (_currentPage == 1) {
-      if (_ageController.text.isEmpty) {
-        CustomSnackBar.show(
-          context: context,
-          message: 'Lütfen yaşınızı girin.',
-          type: NotificationType.error,
-        );
-        return;
-      }
-      if (_cityController.text.isEmpty) {
-        CustomSnackBar.show(
-          context: context,
-          message: 'Lütfen şehrinizi seçin.',
-          type: NotificationType.error,
-        );
-        return;
-      }
-    }
+    // Sadece "Devam" butonuna basıldığında boş bırakılırsa hata verebiliriz,
+    // ama kullanıcı "Şimdilik Geç" diyerek zaten atlayabiliyor.
+    // Ancak sen zorunlu validasyonları tamamen kaldırmamı da isteyebilirsin.
+    // Şimdilik sadece uyarıları koruyoruz ama geçme butonunu da ekledik.
 
     if (_currentPage < 3) {
       FocusScope.of(context).unfocus();
+      _pageController.nextPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    } else {
+      _finishOnboarding();
+    }
+  }
+
+  void _skipPage() {
+    FocusScope.of(context).unfocus();
+    if (_currentPage < 3) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
@@ -363,21 +350,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  if (_currentPage > 0)
-                    TextButton(
-                      onPressed: () {
-                        _pageController.previousPage(
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeInOut,
-                        );
-                      },
-                      child: Text(
-                        'Geri',
-                        style: TextStyle(color: cs.onSurfaceVariant),
-                      ),
-                    )
-                  else
-                    const SizedBox.shrink(),
+                  TextButton(
+                    onPressed: _skipPage,
+                    child: Text(
+                      'Şimdilik Geç',
+                      style: TextStyle(color: cs.onSurfaceVariant),
+                    ),
+                  ),
 
                   ElevatedButton(
                     onPressed: _isLoading ? null : _nextPage,
@@ -402,7 +381,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                                 color: Colors.white,
                               ),
                             )
-                            : Text(_currentPage == 3 ? 'Tamamla' : 'İleri'),
+                            : Text(
+                              _currentPage == 3 ? 'Tamamla' : 'Devam',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
                   ),
                 ],
               ),

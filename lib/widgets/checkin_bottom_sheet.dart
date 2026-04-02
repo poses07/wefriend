@@ -111,13 +111,21 @@ class _CheckInBottomSheetState extends State<CheckInBottomSheet> {
     });
 
     if (result['success']) {
-      CustomSnackBar.show(
-        context: context,
-        message: '${venue['name']} mekanında check-in yapıldı!',
-        type: NotificationType.success,
-      );
+      final data = result['data'];
+      final matchCount = data != null ? (data['match_count'] as int? ?? 0) : 0;
+      
       widget.onCheckInSuccess();
       Navigator.of(context).pop();
+
+      if (matchCount > 0) {
+        _showVenueMatchDialog(context, venue['name'], matchCount);
+      } else {
+        CustomSnackBar.show(
+          context: context,
+          message: '${venue['name']} mekanında check-in yapıldı!',
+          type: NotificationType.success,
+        );
+      }
     } else {
       CustomSnackBar.show(
         context: context,
@@ -125,6 +133,61 @@ class _CheckInBottomSheetState extends State<CheckInBottomSheet> {
         type: NotificationType.error,
       );
     }
+  }
+
+  void _showVenueMatchDialog(BuildContext context, String venueName, int matchCount) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        final cs = Theme.of(context).colorScheme;
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          backgroundColor: cs.surface,
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: cs.primary.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.local_cafe_rounded, size: 48, color: cs.primary),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Yalnız Değilsin!',
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Şu an $venueName mekanında senin dışında $matchCount WeFriend üyesi daha var.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 15, color: cs.onSurfaceVariant),
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context); // Dialogu kapat
+                    // Keşfet -> Mekanlar sekmesine zaten geçiliyor veya oradayız,
+                    // burada "İçeridekiler" listesi yenilenmiş şekilde gösteriliyor.
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: cs.primary,
+                    foregroundColor: cs.onPrimary,
+                    minimumSize: const Size(double.infinity, 50),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                  child: const Text('Kimler Olduğuna Bak 👀', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override

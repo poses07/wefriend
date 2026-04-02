@@ -174,7 +174,11 @@ class VenueService {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['status'] == 'success') {
-          return {'success': true, 'message': data['message']};
+          return {
+            'success': true, 
+            'message': data['message'],
+            'data': data['data'],
+          };
         }
       }
       return {'success': false, 'message': 'Mekan paylaşılamadı'};

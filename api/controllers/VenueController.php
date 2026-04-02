@@ -162,7 +162,25 @@ class VenueController {
             ':venue_name' => $venue_name
         ]);
 
-        Response::json(200, "Mekan paylaşıldı");
+        // Bu mekandaki diğer aktif kullanıcı sayısını bul (Flört/Eşleşme için)
+        $match_stmt = $this->db->prepare("
+            SELECT COUNT(DISTINCT user_id) as other_count
+            FROM venue_checkins 
+            WHERE venue_name = :venue_name 
+              AND user_id != :user_id 
+              AND expires_at > NOW()
+        ");
+        $match_stmt->execute([
+            ':venue_name' => $venue_name,
+            ':user_id' => $user_id
+        ]);
+        $match_data = $match_stmt->fetch(PDO::FETCH_ASSOC);
+        $match_count = $match_data ? (int)$match_data['other_count'] : 0;
+
+        Response::json(200, "Mekan paylaşıldı", [
+            'match_count' => $match_count,
+            'venue_name' => $venue_name
+        ]);
     }
 }
 ?>

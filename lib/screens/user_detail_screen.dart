@@ -291,7 +291,10 @@ class _UserDetailScreenState extends ConsumerState<UserDetailScreen> {
                             theirName: widget.user['alias'] ?? 'İsimsiz',
                             onSendMessage: () async {
                               final chatRes = await api.startChat(
-                                widget.user['id'],
+                                int.tryParse(
+                                      widget.user['id']?.toString() ?? '0',
+                                    ) ??
+                                    0,
                               );
                               if (context.mounted &&
                                   chatRes['success'] == true) {
@@ -299,8 +302,20 @@ class _UserDetailScreenState extends ConsumerState<UserDetailScreen> {
                                   MaterialPageRoute(
                                     builder:
                                         (context) => ChatDetailScreen(
-                                          chatId: chatRes['chat_id'],
-                                          otherUserId: widget.user['id'],
+                                          chatId:
+                                              int.tryParse(
+                                                chatRes['data']['chat_id']
+                                                        ?.toString() ??
+                                                    '0',
+                                              ) ??
+                                              chatRes['chat_id'] ??
+                                              0,
+                                          otherUserId:
+                                              int.tryParse(
+                                                widget.user['id']?.toString() ??
+                                                    '0',
+                                              ) ??
+                                              0,
                                           userName:
                                               widget.user['alias'] ?? 'Anonim',
                                           avatarUrl: primaryImageUrl,
@@ -334,7 +349,11 @@ class _UserDetailScreenState extends ConsumerState<UserDetailScreen> {
                     if (!context.mounted) return;
 
                     if (res['success']) {
-                      final chatId = res['data']['chat_id'];
+                      final chatId =
+                          int.tryParse(
+                            res['data']['chat_id']?.toString() ?? '0',
+                          ) ??
+                          0;
                       Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(

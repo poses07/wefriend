@@ -141,21 +141,25 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
 
     return Scaffold(
       backgroundColor: Colors.transparent,
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       floatingActionButton:
           isVenuesTabActive
-              ? FloatingActionButton.extended(
-                onPressed: () => _showCheckInBottomSheet(context),
-                icon: const Icon(Icons.pin_drop_rounded, color: Colors.white),
-                label: const Text(
-                  'Check-in Yap',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
+              ? Padding(
+                  padding: const EdgeInsets.only(bottom: 80.0), // Alt menü (BottomNavigationBar) çubuğunun üstünde kalması için
+                  child: FloatingActionButton.extended(
+                    onPressed: () => _showCheckInBottomSheet(context),
+                    icon: const Icon(Icons.pin_drop_rounded, color: Colors.white),
+                    label: const Text(
+                      'Check-in Yap',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    backgroundColor: cs.primary,
+                    elevation: 4,
                   ),
-                ),
-                backgroundColor: cs.primary,
-                elevation: 4,
-              )
+                )
               : null, // Kullanıcılar sekmesinde FAB gösterilmez
       body: SafeArea(
         child: Padding(
